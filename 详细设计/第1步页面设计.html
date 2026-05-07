@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第一步：项目基本情况 — 兴宁五塘风电场一期</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="logo-area">
+            <div class="logo-icon">📋</div>
+            <span class="title">建设用地报批审查报告智能生成系统</span>
+        </div>
+        <span class="project-type-badge">📌 单独选址建设项目：兴宁五塘风电场一期</span>
+    </div>
+
+    <div class="step-indicator-wrap">
+        <div class="step-indicator">
+            <div class="step active"><span class="num">1</span> 项目基本情况</div>
+            <span class="arrow">→</span>
+            <a href="第2步页面设计.html"><div class="step"><span class="num">2</span> 申请用地现状</div></a>
+            <span class="arrow">→</span>
+            <a href="第3步页面设计.html"><div class="step"><span class="num">3</span> 农用地转用情况</div></a>
+            <span class="arrow">→</span>
+            <a href="第4步页面设计.html"><div class="step"><span class="num">4</span> 补充耕地情况</div></a>
+            <span class="arrow">→</span>
+            <a href="第5步页面设计.html"><div class="step"><span class="num">5</span> 土地征收情况</div></a>
+            <span class="arrow">→</span>
+            <a href="第6步页面设计.html"><div class="step"><span class="num">6</span> 土地利用情况</div></a>
+            <span class="arrow">→</span>
+            <a href="第7步页面设计.html"><div class="step"><span class="num">7</span> 地灾与压矿</div></a>
+            <span class="arrow">→</span>
+            <a href="第8步页面设计.html"><div class="step"><span class="num">8</span> 信访与违法用地</div></a>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- 左侧上传区 -->
+        <div class="upload-panel">
+            <div class="card">
+                <div class="card-header">
+                    <span class="icon-circle icon-upload">📎</span>
+                    上传批复文件
+                    <span style="font-weight:400;font-size:12px;color:var(--danger);margin-left:auto;">★ 必传文件（3份）均已上传</span>
+                </div>
+                <div class="card-body" id="uploadList">
+                    <!-- ① 用地预审批复 -->
+                    <div class="upload-item uploaded" id="uploadItem-pre">
+                        <div class="item-header">
+                            <div class="item-title-area">
+                                <span class="item-icon">📄</span>
+                                <div>
+                                    <span class="item-label">① 建设用地预审批复</span>
+                                    <div class="item-sub">法定前置条件 · 单独选址项目必备</div>
+                                </div>
+                            </div>
+                            <span class="badge-required">必传</span>
+                        </div>
+                        <div class="file-info" id="fileInfo-pre">
+                            <span class="file-name">📄 桂自然资预审〔2025〕12号.pdf</span>
+                            <span class="status-tag status-ok">✅ 解析完成</span>
+                            <button class="replace-btn" onclick="triggerReplace('pre')">🔄 替换文件</button>
+                        </div>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" id="fileInput-pre" data-file-type="pre">
+                    </div>
+                    <!-- ② 立项批复 -->
+                    <div class="upload-item uploaded" id="uploadItem-approval">
+                        <div class="item-header">
+                            <div class="item-title-area">
+                                <span class="item-icon">📄</span>
+                                <div>
+                                    <span class="item-label">② 项目立项批复文件</span>
+                                    <div class="item-sub">核准批复 · 桂发改能源〔2025〕215号</div>
+                                </div>
+                            </div>
+                            <span class="badge-required">必传</span>
+                        </div>
+                        <div class="file-info" id="fileInfo-approval">
+                            <span class="file-name">📄 桂发改能源〔2025〕215号.pdf</span>
+                            <span class="status-tag status-ok">✅ 解析完成</span>
+                            <button class="replace-btn" onclick="triggerReplace('approval')">🔄 替换文件</button>
+                        </div>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" id="fileInput-approval" data-file-type="approval">
+                    </div>
+                    <!-- ③ 初设批复 -->
+                    <div class="upload-item uploaded" id="uploadItem-design">
+                        <div class="item-header">
+                            <div class="item-title-area">
+                                <span class="item-icon">📄</span>
+                                <div>
+                                    <span class="item-label">③ 初步设计批复文件</span>
+                                    <div class="item-sub">桂能新能〔2025〕88号</div>
+                                </div>
+                            </div>
+                            <span class="badge-required">必传</span>
+                        </div>
+                        <div class="file-info" id="fileInfo-design">
+                            <span class="file-name">📄 桂能新能〔2025〕88号.pdf</span>
+                            <span class="status-tag status-ok">✅ 解析完成</span>
+                            <button class="replace-btn" onclick="triggerReplace('design')">🔄 替换文件</button>
+                        </div>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" id="fileInput-design" data-file-type="design">
+                    </div>
+
+                    <div style="border-top:1px dashed var(--gray-300);margin:16px 0 12px;padding-top:4px;">
+                        <span style="font-size:12px;color:var(--gray-500);font-weight:600;">○ 可选文件（项目有变更时上传）</span>
+                    </div>
+                    <!-- ④ 可研变更批复 -->
+                    <div class="upload-item uploaded" id="uploadItem-approvalChange">
+                        <div class="item-header">
+                            <div class="item-title-area">
+                                <span class="item-icon">📄</span>
+                                <div>
+                                    <span class="item-label">④ 可行性研究报告变更批复</span>
+                                    <div class="item-sub">桂发改能源〔2025〕381号</div>
+                                </div>
+                            </div>
+                            <span class="badge-optional">已传</span>
+                        </div>
+                        <div class="file-info" id="fileInfo-approvalChange">
+                            <span class="file-name">📄 桂发改能源〔2025〕381号.pdf</span>
+                            <span class="status-tag status-ok">✅ 解析完成</span>
+                            <button class="replace-btn" onclick="triggerReplace('approvalChange')">🔄 替换文件</button>
+                        </div>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" id="fileInput-approvalChange" data-file-type="approvalChange">
+                    </div>
+
+                    <!-- ⑤ 初步设计变更批复（从0001.html移植过来） -->
+                    <div class="upload-item" id="uploadItem-designChange">
+                        <div class="item-header">
+                            <div class="item-title-area">
+                                <span class="item-icon">📄</span>
+                                <div>
+                                    <span class="item-label">⑤ 初步设计变更批复</span>
+                                    <div class="item-sub">如有初设变更，请上传</div>
+                                </div>
+                            </div>
+                            <span class="badge-optional">选传</span>
+                        </div>
+                        <div class="upload-hint">📤 拖拽或点击此处上传 PDF 文件（如无可不传）</div>
+                        <div class="file-info" id="fileInfo-designChange" style="display:none;"></div>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" id="fileInput-designChange" data-file-type="designChange">
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧解析数据预览区 -->
+        <div class="preview-panel">
+            <div class="card">
+                <div class="card-header">
+                    <span class="icon-circle icon-preview">🔍</span>
+                    解析数据预览与核对
+                    <span style="font-weight:400;font-size:11px;color:var(--gray-500);margin-left:auto;">数据已从上传文件中自动提取，请核对修改</span>
+                </div>
+                <div class="card-body" id="previewBody">
+                    <!-- 数据表格 -->
+                    <div id="dataPreviewForm">
+                        <!-- 项目基本信息 -->
+                        <div class="preview-section">
+                            <h4><span class="dot dot-blue"></span> 项目基本信息</h4>
+                            <table class="data-table">
+                                <thead>
+                                    <tr><th>字段名称</th><th>解析值</th><th>数据来源</th><th>操作</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>项目名称</td>
+                                        <td>兴宁五塘风电场一期工程</td>
+                                        <td><span class="field-source">📎 立项批复</span></td>
+                                        <td><button class="modify-btn">修改</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>项目代码</td>
+                                        <td>2025-450000-44-01-008976</td>
+                                        <td><span class="field-source">📎 立项批复</span></td>
+                                        <td><button class="modify-btn">修改</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>建设单位</td>
+                                        <td>广西兴宁风电开发有限公司</td>
+                                        <td><span class="field-source">📎 立项批复</span></td>
+                                        <td><button class="modify-btn">修改</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>立项类型</td>
+                                        <td>核准</td>
+                                        <td><span class="field-source">📎 系统识别</span></td>
+                                        <td><button class="modify-btn">修改</button></td>
+                                    </tr>
+                                    <tr class="highlight-change">
+                                        <td>总投资（亿元）<br><small style="color:#e8870a;">已以变更批复为准</small></td>
+                                        <td><strong>9.12</strong></td>
+                                        <td><span class="field-source">📎 可研变更批复</span></td>
+                                        <td><button class="modify-btn">修改</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 用地预审 -->
+                        <div class="preview-section">
+                            <h4><span class="dot dot-blue"></span> 用地预审情况</h4>
+                            <table class="data-table">
+                                <thead><tr><th>字段名称</th><th>解析值</th><th>数据来源</th><th>操作</th></tr></thead>
+                                <tbody>
+                                    <tr><td>预审审批机关</td><td>广西壮族自治区自然资源厅</td><td><span class="field-source">📎 预审批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>预审文号</td><td>桂自然资预审〔2025〕12号</td><td><span class="field-source">📎 预审批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>预审批复日期</td><td>2025-03-20</td><td><span class="field-source">📎 预审批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>预审控制总规模</td><td>12.86公顷</td><td><span class="field-source">📎 预审批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>其中：农用地</td><td>11.52公顷</td><td><span class="field-source">📎 预审批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>其中：耕地</td><td>3.68公顷</td><td><span class="field-source">📎 预审批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>其中：永久基本农田</td><td>1.82公顷</td><td><span class="field-source">📎 预审批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 立项批复 -->
+                        <div class="preview-section">
+                            <h4><span class="dot dot-blue"></span> 立项批复（核准）情况</h4>
+                            <table class="data-table">
+                                <thead><tr><th>字段名称</th><th>解析值</th><th>数据来源</th><th>操作</th></tr></thead>
+                                <tbody>
+                                    <tr><td>立项批复机关</td><td>广西壮族自治区发展和改革委员会</td><td><span class="field-source">📎 核准批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>立项批复文号</td><td>桂发改能源〔2025〕215号</td><td><span class="field-source">📎 核准批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>立项批复日期</td><td>2025-05-15</td><td><span class="field-source">📎 核准批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>原核准总投资（亿元）</td><td>8.75 <span class="status-tag val-info" style="margin-left:6px;">已被变更覆盖</span></td><td><span class="field-source">📎 核准批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>原核准建设规模</td><td>总装机容量100MW，安装20台单机容量5.0MW风电机组，新建一座110kV升压站</td><td><span class="field-source">📎 核准批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 初设批复 -->
+                        <div class="preview-section">
+                            <h4><span class="dot dot-blue"></span> 初步设计批复情况</h4>
+                            <table class="data-table">
+                                <thead><tr><th>字段名称</th><th>解析值</th><th>数据来源</th><th>操作</th></tr></thead>
+                                <tbody>
+                                    <tr><td>初设批复机关</td><td>广西壮族自治区能源局</td><td><span class="field-source">📎 初设批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>初设批复文号</td><td>桂能新能〔2025〕88号</td><td><span class="field-source">📎 初设批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>初设批复日期</td><td>2025-07-10</td><td><span class="field-source">📎 初设批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>建设标准</td><td>总装机容量100MW，安装20台单机容量5.0MW风力发电机组</td><td><span class="field-source">📎 初设批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>详细建设内容</td><td>风机基础20座（轮毂高度120m，叶轮直径185m），新建110kV升压站1座（占地0.82公顷），进场道路8.5公里（路基宽6.5m），集电线路塔基48座</td><td><span class="field-source">📎 初设批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 可研变更批复 -->
+                        <div class="preview-section">
+                            <h4><span class="dot dot-orange"></span> 可研变更批复情况（可选文件已上传）</h4>
+                            <table class="data-table">
+                                <thead><tr><th>字段名称</th><th>解析值</th><th>数据来源</th><th>操作</th></tr></thead>
+                                <tbody>
+                                    <tr><td>可研变更批复机关</td><td>广西壮族自治区发展和改革委员会</td><td><span class="field-source">📎 可研变更批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>可研变更批复文号</td><td>桂发改能源〔2025〕381号</td><td><span class="field-source">📎 可研变更批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>可研变更批复日期</td><td>2025-09-05</td><td><span class="field-source">📎 可研变更批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>变更后总投资（亿元）</td><td>9.12</td><td><span class="field-source">📎 可研变更批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                    <tr><td>变更后建设规模</td><td>总装机容量不变，升压站由110kV调整为220kV，新增1回220kV送出线路</td><td><span class="field-source">📎 可研变更批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 情形选择器：可研批复 -->
+                        <div class="preview-section">
+                            <h4><span class="dot dot-orange"></span> 可研批复情形选择</h4>
+                            <div class="case-selector" id="caseApproval">
+                                <div class="case-card" data-case="1" onclick="selectCase1('approval',1)">
+                                    <span class="case-num">①</span>
+                                    <span class="case-desc">预审在可研批复后<br>已出具检讨</span>
+                                </div>
+                                <div class="case-card" data-case="2" onclick="selectCase1('approval',2)">
+                                    <span class="case-num">②</span>
+                                    <span class="case-desc">已超核准有效期<br>已延期</span>
+                                </div>
+                                <div class="case-card selected" data-case="3" onclick="selectCase1('approval',3)">
+                                    <span class="case-num">③</span>
+                                    <span class="case-desc">可研变更<br>已批复</span>
+                                </div>
+                            </div>
+                            <p style="font-size:11px;color:var(--gray-500);margin-top:8px;">当前选择：<strong id="approvalSelected">情形③ — 可研变更，已批复</strong></p>
+                        </div>
+
+                        <!-- 情形选择器：初步设计变更 -->
+                        <div class="preview-section">
+                            <h4><span class="dot dot-orange"></span> 初步设计变更情形选择</h4>
+                            <div class="case-selector" id="caseDesign">
+                                <div class="case-card selected" data-case="1" onclick="selectCase1('design',1)">
+                                    <span class="case-num">①</span>
+                                    <span class="case-desc">普通变更<br>已批复</span>
+                                </div>
+                                <div class="case-card" data-case="2" onclick="selectCase1('design',2)">
+                                    <span class="case-num">②</span>
+                                    <span class="case-desc">审批权下放<br>地方办理</span>
+                                </div>
+                            </div>
+                            <p style="font-size:11px;color:var(--gray-500);margin-top:8px;">当前选择：<strong id="designSelected">情形① — 普通变更，已批复</strong></p>
+                        </div>
+
+                        <!-- 情形选择器：分期/分段报批 -->
+                        <div class="preview-section">
+                            <h4><span class="dot dot-orange"></span> 分期/分段报批情形选择</h4>
+                            <div class="case-selector" id="casePhase">
+                                <div class="case-card" data-case="1" onclick="selectCase1('phase',1)">
+                                    <span class="case-num">①</span>
+                                    <span class="case-desc">分段报批<br>多城市</span>
+                                </div>
+                                <div class="case-card selected" data-case="2" onclick="selectCase1('phase',2)">
+                                    <span class="case-num">②</span>
+                                    <span class="case-desc">分期报批<br>已确定期数</span>
+                                </div>
+                            </div>
+                            <p style="font-size:11px;color:var(--gray-500);margin-top:8px;">当前选择：<strong id="phaseSelected">情形② — 分期报批</strong></p>
+                        </div>
+
+                        <!-- 情形选择器：单独选址 -->
+                        <div class="preview-section">
+                            <h4><span class="dot dot-orange"></span> 单独选址情形选择</h4>
+                            <div class="case-selector" id="caseLocation">
+                                <div class="case-card selected" data-case="1" onclick="selectCase1('location',1)">
+                                    <span class="case-num">①</span>
+                                    <span class="case-desc">完全在规划<br>范围外</span>
+                                </div>
+                                <div class="case-card" data-case="2" onclick="selectCase1('location',2)">
+                                    <span class="case-num">②</span>
+                                    <span class="case-desc">部分在规划<br>范围内</span>
+                                </div>
+                            </div>
+                            <p style="font-size:11px;color:var(--gray-500);margin-top:8px;">当前选择：<strong id="locationSelected">情形① — 完全在规划范围外</strong></p>
+                        </div>
+
+                        <!-- 情形选择器：林地审批 -->
+                        <div class="preview-section">
+                            <h4><span class="dot dot-orange"></span> 林地审批情形选择</h4>
+                            <div class="case-selector" id="caseForest">
+                                <div class="case-card selected" data-case="1" onclick="selectCase1('forest',1)">
+                                    <span class="case-num">①</span>
+                                    <span class="case-desc">涉及林地<br>已审批</span>
+                                </div>
+                                <div class="case-card" data-case="2" onclick="selectCase1('forest',2)">
+                                    <span class="case-num">②</span>
+                                    <span class="case-desc">不涉及林地</span>
+                                </div>
+                            </div>
+                            <p style="font-size:11px;color:var(--gray-500);margin-top:8px;">当前选择：<strong id="forestSelected">情形① — 涉及林地，已审批</strong></p>
+                        </div>
+
+                        <!-- 情形选择器：动工用地 -->
+                        <div class="preview-section">
+                            <h4><span class="dot dot-orange"></span> 动工用地情况选择</h4>
+                            <div class="case-selector" id="caseConstruction">
+                                <div class="case-card selected" data-case="1" onclick="selectCase1('construction',1)">
+                                    <span class="case-num">①</span>
+                                    <span class="case-desc">项目未动工</span>
+                                </div>
+                                <div class="case-card" data-case="2" onclick="selectCase1('construction',2)">
+                                    <span class="case-num">②</span>
+                                    <span class="case-desc">已动工用地<br>不超先行用地</span>
+                                </div>
+                            </div>
+                            <p style="font-size:11px;color:var(--gray-500);margin-top:8px;">当前选择：<strong id="constructionSelected">情形① — 项目未动工</strong></p>
+                        </div>
+
+                        <!-- 情形选择器：核减用地 -->
+                        <div class="preview-section">
+                            <h4><span class="dot dot-orange"></span> 核减用地情况选择</h4>
+                            <div class="case-selector" id="caseReduction">
+                                <div class="case-card selected" data-case="1" onclick="selectCase1('reduction',1)">
+                                    <span class="case-num">①</span>
+                                    <span class="case-desc">未核减用地</span>
+                                </div>
+                                <div class="case-card" data-case="2" onclick="selectCase1('reduction',2)">
+                                    <span class="case-num">②</span>
+                                    <span class="case-desc">已核减用地</span>
+                                </div>
+                            </div>
+                            <p style="font-size:11px;color:var(--gray-500);margin-top:8px;">当前选择：<strong id="reductionSelected">情形① — 未核减用地</strong></p>
+                        </div>
+
+                        <!-- 系统校验结果 -->
+                        <div class="preview-section" style="border-bottom:none;">
+                            <h4><span class="dot dot-orange"></span> 系统实时校验结果</h4>
+                            <table class="data-table">
+                                <thead><tr><th>校验项</th><th>结果</th><th>说明</th></tr></thead>
+                                <tbody>
+                                    <tr>
+                                        <td>预审批复有效期</td>
+                                        <td><span class="val-badge val-pass">✅ 通过</span></td>
+                                        <td>预审日期2025-03-20，距今约14个月，在3年有效期内（剩余约22个月）</td>
+                                    </tr>
+                                    <tr>
+                                        <td>核准批复有效期</td>
+                                        <td><span class="val-badge val-pass">✅ 通过</span></td>
+                                        <td>核准日期2025-05-15，距今约12个月，在2年有效期内（剩余约12个月）</td>
+                                    </tr>
+                                    <tr>
+                                        <td>预审与初设时序</td>
+                                        <td><span class="val-badge val-pass">✅ 通过</span></td>
+                                        <td>初设日期（2025-07-10）晚于预审日期（2025-03-20），时序正常</td>
+                                    </tr>
+                                    <tr>
+                                        <td>2024年后预审附加文本</td>
+                                        <td><span class="val-badge val-info">📝 已触发</span></td>
+                                        <td>系统将在审查报告中自动附加“可行性研究报告已包含节约集约用地专章相关内容”</td>
+                                    </tr>
+                                    <tr>
+                                        <td>可研变更覆盖</td>
+                                        <td><span class="val-badge val-info">📝 已触发</span></td>
+                                        <td>总投资、建设规模等字段已自动替换为可研变更批复中的最新数据</td>
+                                    </tr>
+                                    <tr>
+                                        <td>占用永久基本农田</td>
+                                        <td><span class="val-badge val-warn">⚠️ 需关注</span></td>
+                                        <td>预审批复显示占用永久基本农田1.82公顷，需在后续步骤中上传补划方案</td>
+                                    </tr>
+                                    <tr>
+                                        <td>报批层级判定</td>
+                                        <td><span class="val-badge val-warn">⚠️ 需关注</span></td>
+                                        <td>涉及占用永久基本农田，按规定应呈报国务院审批</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div style="margin-top:20px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid var(--gray-100); padding-top:16px;">
+                            <button class="btn btn-outline" onclick="exportToJson()">💾 导出数据</button>
+                            <button class="btn btn-outline" onclick="loadFromJsonFile()">📂 导入数据</button>
+                            <button class="btn btn-outline" onclick="clearAllData()">🗑️ 清空数据</button>
+                            <button class="btn btn-success" onclick="initRealData()">📊 加载真实数据</button>
+                            <button class="btn btn-outline" onclick="alert('重新解析中...')">🔄 重新解析全部文件</button>
+                            <button class="btn btn-secondary" onclick="saveStepData(1)">💾 保存草稿</button>
+                            <button class="btn btn-info" onclick="previewReport()">👁️ 预览审查报告</button>
+                            <button class="btn btn-primary" id="btnNext" onclick="saveAndNext(1)">保存并进入下一步 →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar" style="display:none;">
+        <!-- 底部按钮已在预览区内，此处隐藏 -->
+    </div>
+
+    <script src="common.js"></script>
+    <script src="初始化真实数据.js"></script>
+    <script>
+        // 全局存储所有情形选择
+        var step1Cases = {
+            approval: '3',
+            design: '1',
+            phase: '2',
+            location: '1',
+            forest: '1',
+            construction: '1',
+            reduction: '1'
+        };
+
+        // 全局情形描述文本
+        var caseDescriptions = {
+            approval: ['', '情形① — 预审在可研批复后，已出具检讨', '情形② — 已超核准有效期，已延期', '情形③ — 可研变更，已批复'],
+            design: ['', '情形① — 普通变更，已批复', '情形② — 审批权下放，地方办理'],
+            phase: ['', '情形① — 分段报批，多城市', '情形② — 分期报批'],
+            location: ['', '情形① — 完全在规划范围外', '情形② — 部分在规划范围内'],
+            forest: ['', '情形① — 涉及林地，已审批', '情形② — 不涉及林地'],
+            construction: ['', '情形① — 项目未动工', '情形② — 已动工用地，不超先行用地'],
+            reduction: ['', '情形① — 未核减用地', '情形② — 已核减用地']
+        };
+
+        // 统一的情形选择器函数
+        function selectCase1(type, caseNum) {
+            // 更新选择状态
+            step1Cases[type] = String(caseNum);
+            
+            // 更新UI：移除所有选中状态
+            var selectorId = 'case' + type.charAt(0).toUpperCase() + type.slice(1);
+            var container = document.getElementById(selectorId);
+            var cards = container.querySelectorAll('.case-card');
+            cards.forEach(function(card) {
+                card.classList.remove('selected');
+                if (card.getAttribute('data-case') == caseNum) {
+                    card.classList.add('selected');
+                }
+            });
+
+            // 更新当前选择文本
+            var labelId = type + 'Selected';
+            document.getElementById(labelId).textContent = caseDescriptions[type][caseNum];
+
+            // 保存数据
+            saveStepData(1);
+        }
+
+        // 模拟文件替换等操作保持界面交互
+        function triggerReplace(type) {
+            alert('演示模式：触发替换"' + type + '"文件。实际系统将打开文件选择器并重新解析。');
+        }
+
+        // 保存当前步骤数据到JSON（localStorage）
+        function saveStepData(step) {
+            var rows = document.querySelectorAll('table tbody tr');
+            var data = {};
+            rows.forEach(function(row) {
+                var label = row.cells[0].textContent.trim();
+                var value = row.cells[1].textContent.trim();
+                if (label.includes('项目名称')) data.projectName = value;
+                else if (label.includes('项目代码')) data.projectCode = value;
+                else if (label.includes('建设单位')) data.constructionUnit = value;
+                else if (label.includes('立项类型')) data.projectType = value;
+                else if (label.includes('总投资')) data.totalInvestment = value;
+                else if (label.includes('建设规模')) data.scale = value;
+            });
+
+            // 添加所有情形选择数据
+            data.caseApproval = step1Cases.approval;
+            data.caseDesign = step1Cases.design;
+            data.casePhase = step1Cases.phase;
+            data.caseLocation = step1Cases.location;
+            data.caseForest = step1Cases.forest;
+            data.caseConstruction = step1Cases.construction;
+            data.caseReduction = step1Cases.reduction;
+
+            // 添加预览时需要的其他字段
+            data.preApprovalScale = '12.86';
+            data.actualScale = '12.86';
+            data.signer = '张三';
+            data.contact = '李四';
+            data.phone = '13800138000';
+
+            localStorage.setItem('step' + step + 'Data', JSON.stringify(data));
+            console.log('✅ 第' + step + '步数据已保存:', JSON.stringify(data));
+            return data;
+        }
+
+        // 预览审查报告
+        function previewReport() {
+            localStorage.setItem('fromPage', '第1步页面设计.html');
+            window.location.href = '兴宁五塘风电场一期_审查报告.md';
+        }
+
+        StepApp.init(1);
+        console.log('✅ 页面已加载示例数据：兴宁五塘风电场一期');
+        console.log('📋 右侧预览区完整展示了智能解析后的字段、数据来源及校验结果');
+        console.log('📋 已添加7个情形选择器，选择结果将保存到JSON');
+    </script>
+</body>
+</html>

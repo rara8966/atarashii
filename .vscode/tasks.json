@@ -1,0 +1,32 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "policy-report: 启动后端",
+			"type": "shell",
+			"command": ".\\启动.bat backend",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "policy-report: 启动前端",
+			"type": "shell",
+			"command": ".\\启动.bat frontend",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "policy-report: 启动前后端",
+			"type": "shell",
+			"command": ".\\启动.bat all",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		}
+	]
+}

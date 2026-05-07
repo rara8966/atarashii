@@ -1,0 +1,14 @@
+backend/target/
+backend/data/
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+
+analysis-result.json
+report-request.json
+report-result.json
+report-empty-request.json
+report-empty-result.json
+.copilot-test/
+.runtime/
+PolicyReportDemo/

@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>建设用地报批审查报告</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SimSun', 'Microsoft YaHei', serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.8;
+        }
+
+        .report-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 1px solid #ddd;
+        }
+
+        .report-header {
+            text-align: center;
+            padding: 40px 30px 20px;
+            border-bottom: 2px solid #005a87;
+        }
+
+        .report-header h1 {
+            font-size: 22px;
+            font-weight: bold;
+            color: #005a87;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+        }
+
+        .report-header .subtitle {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .report-body {
+            padding: 30px;
+        }
+
+        .project-info {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #fafafa;
+            border-left: 4px solid #005a87;
+        }
+
+        .project-info .label {
+            font-weight: bold;
+            color: #333;
+            margin-right: 8px;
+        }
+
+        .project-info .value {
+            color: #666;
+        }
+
+        .project-info .project-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #005a87;
+            margin-bottom: 10px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #005a87;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title .num {
+            background: #005a87;
+            color: white;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .subsection-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0 12px 0;
+            padding-left: 10px;
+            border-left: 3px solid #005a87;
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+
+        .info-table th {
+            background: #f0f5f8;
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: bold;
+            color: #333;
+            border: 1px solid #e0e0e0;
+            width: 35%;
+        }
+
+        .info-table td {
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            color: #333;
+        }
+
+        .info-table .empty {
+            color: #999;
+            font-style: italic;
+        }
+
+        .info-table .highlight {
+            background: #fff3cd;
+        }
+
+        .progress-section {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+
+        .progress-section h3 {
+            font-size: 14px;
+            color: #856404;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            height: 12px;
+            background: #ffeeba;
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #005a87 0%, #0077b3 100%);
+            border-radius: 6px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #856404;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            padding: 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .btn-primary {
+            background: #005a87;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #004a70;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .btn-secondary:hover {
+            background: #e8e8e8;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .step-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px dashed #ddd;
+        }
+
+        .step-nav-item {
+            flex: 1;
+            min-width: 150px;
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .step-nav-item.active {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+        }
+
+        .step-nav-item.done {
+            background: #e8f5e9;
+            border: 1px solid #a5d6a7;
+        }
+
+        .step-nav-item .step-num {
+            width: 22px;
+            height: 22px;
+            background: #ccc;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+        }
+
+        .step-nav-item.done .step-num {
+            background: #4caf50;
+        }
+
+        .step-nav-item.active .step-num {
+            background: #2196f3;
+        }
+
+        .step-nav-item .step-title {
+            flex: 1;
+        }
+
+        .step-nav-item .status {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .step-nav-item.done .status {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+
+        .step-nav-item.active .status {
+            background: #bbdefb;
+            color: #1565c0;
+        }
+
+        .step-nav-item:not(.done):not(.active) .status {
+            background: #ffe0b2;
+            color: #e65100;
+        }
+
+        .summary-section {
+            margin-bottom: 30px;
+        }
+
+        .summary-section h3 {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .summary-item {
+            background: #fafafa;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .summary-item .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #005a87;
+        }
+
+        .summary-item .label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .info-table th,
+            .info-table td {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .step-nav {
+                flex-direction: column;
+            }
+
+            .step-nav-item {
+                min-width: 100%;
+            }
+
+            .report-body {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <div class="report-header">
+            <h1>建设用地报批审查报告</h1>
+            <div class="subtitle">审查报告完成进度预览</div>
+        </div>
+
+        <div class="report-body">
+            <div class="project-info">
+                <div class="project-name">📌 项目名称：兴宁五塘风电场一期工程</div>
+                <div><span class="label">项目代码：</span><span class="value" id="proj-code">2025-450000-44-01-008976</span></div>
+                <div><span class="label">建设单位：</span><span class="value" id="proj-unit">广西兴宁风电开发有限公司</span></div>
+                <div><span class="label">立项类型：</span><span class="value" id="proj-type">核准</span></div>
+                <div><span class="label">总投资：</span><span class="value" id="proj-invest">9.12亿元</span></div>
+            </div>
+
+            <div class="progress-section">
+                <h3>📊 数据填报进度概览</h3>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="value" id="filled-count">0</div>
+                        <div class="label">已填写数据项</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="value" id="empty-count">0</div>
+                        <div class="label">待填写数据项</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="value" id="completion-rate">0<span style="font-size:14px;">%</span></div>
+                        <div class="label">完成率</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="progress-info">
+                    <span>填报进度</span>
+                    <span id="progress-text">0/0 已完成</span>
+                </div>
+            </div>
+
+            <div class="step-nav">
+                <div class="step-nav-item done">
+                    <span class="step-num">1</span>
+                    <span class="step-title">项目基本情况</span>
+                    <span class="status">已完成</span>
+                </div>
+                <div class="step-nav-item done">
+                    <span class="step-num">2</span>
+                    <span class="step-title">申请用地现状</span>
+                    <span class="status">已完成</span>
+                </div>
+                <div class="step-nav-item">
+                    <span class="step-num">3</span>
+                    <span class="step-title">农用地转用情况</span>
+                    <span class="status">待填写</span>
+                </div>
+                <div class="step-nav-item">
+                    <span class="step-num">4</span>
+                    <span class="step-title">补充耕地情况</span>
+                    <span class="status">待填写</span>
+                </div>
+                <div class="step-nav-item">
+                    <span class="step-num">5</span>
+                    <span class="step-title">土地征收情况</span>
+                    <span class="status">待填写</span>
+                </div>
+                <div class="step-nav-item">
+                    <span class="step-num">6</span>
+                    <span class="step-title">土地利用情况</span>
+                    <span class="status">待填写</span>
+                </div>
+                <div class="step-nav-item">
+                    <span class="step-num">7</span>
+                    <span class="step-title">地灾与压矿</span>
+                    <span class="status">待填写</span>
+                </div>
+                <div class="step-nav-item">
+                    <span class="step-num">8</span>
+                    <span class="step-title">信访与违法用地</span>
+                    <span class="status">待填写</span>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span class="num">一</span>
+                    <span>项目基本情况</span>
+                </div>
+                <table class="info-table">
+                    <tr>
+                        <th>项目名称</th>
+                        <td id="p1-project-name">兴宁五塘风电场一期工程</td>
+                    </tr>
+                    <tr>
+                        <th>项目代码</th>
+                        <td id="p1-project-code">2025-450000-44-01-008976</td>
+                    </tr>
+                    <tr>
+                        <th>建设单位</th>
+                        <td id="p1-construction-unit">广西兴宁风电开发有限公司</td>
+                    </tr>
+                    <tr>
+                        <th>立项类型</th>
+                        <td id="p1-project-type">核准</td>
+                    </tr>
+                    <tr>
+                        <th>总投资（亿元）</th>
+                        <td id="p1-total-investment">9.12</td>
+                    </tr>
+                    <tr>
+                        <th>建设规模</th>
+                        <td id="p1-scale" class="empty">-</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span class="num">二</span>
+                    <span>申请用地现状</span>
+                </div>
+                <table class="info-table">
+                    <tr>
+                        <th>勘测定界单位</th>
+                        <td id="p2-survey-unit" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>资质证号</th>
+                        <td id="p2-qualification-no" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>涉及县（市、区）</th>
+                        <td id="p2-county" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>涉及乡镇</th>
+                        <td id="p2-towns" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>涉及村</th>
+                        <td id="p2-villages" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>涉及国有单位</th>
+                        <td id="p2-state-units" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>农用地</th>
+                        <td id="p2-agricultural-land" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>耕地</th>
+                        <td id="p2-cultivated-land" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>永久基本农田</th>
+                        <td id="p2-basic-farmland" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>建设用地</th>
+                        <td id="p2-construction-land" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>未利用地</th>
+                        <td id="p2-unused-land" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>总宗地数</th>
+                        <td id="p2-total-parcels" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>已登记发证宗地数</th>
+                        <td id="p2-registered-parcels" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>未登记发证宗地数</th>
+                        <td id="p2-unregistered-parcels" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>权属争议</th>
+                        <td id="p2-ownership-dispute" class="empty">-</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span class="num">三</span>
+                    <span>农用地转用情况</span>
+                </div>
+                <table class="info-table">
+                    <tr>
+                        <th>农用地面积</th>
+                        <td id="p3-agricultural-area" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>耕地面积</th>
+                        <td id="p3-cultivated-area" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>永久基本农田</th>
+                        <td id="p3-basic-farmland-area" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>未利用地</th>
+                        <td id="p3-unused-area" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>申请占用永农</th>
+                        <td id="p3-basic-farmland-apply" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>占用永农平均质量</th>
+                        <td id="p3-basic-farmland-quality" class="empty">-</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span class="num">四</span>
+                    <span>补充耕地情况</span>
+                </div>
+                <table class="info-table">
+                    <tr>
+                        <th>占用耕地面积</th>
+                        <td id="p4-occupied-cultivated-area" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>占用水田面积</th>
+                        <td id="p4-occupied-paddy-area" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>管理方式</th>
+                        <td id="p4-management-method" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>补充耕地确认信息编号</th>
+                        <td id="p4-supplement-info-no" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>已补充耕地数量</th>
+                        <td id="p4-supplemented-area" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>已补充水田规模</th>
+                        <td id="p4-supplemented-paddy-scale" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>已补充粮食产能</th>
+                        <td id="p4-supplemented-yield" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>补充耕地项目编号</th>
+                        <td id="p4-supplement-project-no" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>补充耕地总费用</th>
+                        <td id="p4-supplement-cost" class="empty">-</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span class="num">五</span>
+                    <span>土地征收情况</span>
+                </div>
+                <table class="info-table">
+                    <tr>
+                        <th>涉及区片数</th>
+                        <td id="p5-zone-count" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>每亩补偿范围</th>
+                        <td id="p5-compensation-range" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>社保费用到账</th>
+                        <td id="p5-social-security-fee" class="empty">-</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span class="num">六</span>
+                    <span>土地利用情况</span>
+                </div>
+                <table class="info-table">
+                    <tr>
+                        <th>国家产业政策</th>
+                        <td id="p6-industry-policy" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>限制用地目录</th>
+                        <td id="p6-restricted-land" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>禁止用地目录</th>
+                        <td id="p6-prohibited-land" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>项目类型</th>
+                        <td id="p6-project-type" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>建设标准</th>
+                        <td id="p6-construction-standard" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>建设内容概述</th>
+                        <td id="p6-construction-content" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>适用用地标准</th>
+                        <td id="p6-land-standard" class="empty">-</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span class="num">七</span>
+                    <span>地质灾害与压覆矿产</span>
+                </div>
+                <table class="info-table">
+                    <tr>
+                        <th>评估单位名称</th>
+                        <td id="p7-evaluation-unit" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>评估单位资质等级</th>
+                        <td id="p7-evaluation-qualification" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>评估级别</th>
+                        <td id="p7-evaluation-level" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>评估报告编制日期</th>
+                        <td id="p7-evaluation-date" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>专家组审查日期</th>
+                        <td id="p7-expert-review-date" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>地灾评估结论</th>
+                        <td id="p7-geology-conclusion" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>是否压覆重要矿产</th>
+                        <td id="p7-mineral-overlap" class="empty">-</td>
+                    </tr>
+                    <tr>
+                        <th>压覆重要矿产评估</th>
+                        <td id="p7-mineral-evaluation" class="empty">-</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span class="num">八</span>
+                    <span>信访与违法用地</span>
+                </div>
+                <table class="info-table">
+                    <tr>
+                        <th>违法用地情形</th>
+                        <td id="p8-selected-case" class="empty">-</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="nav-buttons">
+            <button class="btn btn-secondary" onclick="goBack()">← 返回上一页</button>
+            <button class="btn btn-secondary" onclick="goToStep('第1步页面设计.html')">返回第一步</button>
+            <button class="btn btn-outline" onclick="loadFromJsonFile()">📂 导入JSON</button>
+            <button class="btn btn-outline" onclick="exportToJson()">💾 导出JSON</button>
+            <button class="btn btn-outline" onclick="clearAllData()">🗑️ 清空数据</button>
+            <button class="btn btn-info" onclick="showJSON()">📋 查看JSON数据</button>
+            <button class="btn btn-primary" onclick="downloadReport()">📥 导出审查报告</button>
+            <button class="btn btn-success" onclick="goToFullReport()">📝 生成正式报告</button>
+        </div>
+    </div>
+
+    <script>
+        var reportData = {
+            step1: {
+                projectName: '兴宁五塘风电场一期工程',
+                projectCode: '2025-450000-44-01-008976',
+                constructionUnit: '广西兴宁风电开发有限公司',
+                projectType: '核准',
+                totalInvestment: '9.12',
+                scale: '',
+                preApprovalScale: '',
+                actualScale: '',
+                scaleChangeReason: ''
+            },
+            step2: {
+                surveyUnit: '',
+                qualificationNo: '',
+                county: '',
+                towns: '',
+                villages: '',
+                stateUnits: '',
+                totalParcels: '',
+                registeredParcels: '',
+                unregisteredParcels: '',
+                ownershipDispute: '',
+                agriculturalLand: '',
+                cultivatedLand: '',
+                basicFarmland: '',
+                constructionLand: '',
+                unusedLand: '',
+                collectiveLand: '',
+                stateLand: '',
+                stateLandDetails: '',
+                stateLandAgreement: ''
+            },
+            step3: {
+                agriculturalArea: '',
+                cultivatedArea: '',
+                basicFarmlandArea: '',
+                unusedArea: '',
+                basicFarmlandApply: '',
+                basicFarmlandQuality: '',
+                supplementArea: '',
+                supplementQuality: '',
+                surveyDate: '',
+                conversionArea: ''
+            },
+            step4: {
+                occupiedCultivatedArea: '',
+                occupiedPaddyArea: '',
+                managementMethod: '',
+                supplementInfoNo: '',
+                supplementedArea: '',
+                supplementedPaddyScale: '',
+                supplementedYield: '',
+                supplementProjectNo: '',
+                supplementCost: ''
+            },
+            step5: {
+                zoneCount: '',
+                compensationRange: '',
+                socialSecurityFee: ''
+            },
+            step6: {
+                industryPolicy: '',
+                restrictedLand: '',
+                prohibitedLand: '',
+                projectType: '',
+                constructionStandard: '',
+                constructionContent: '',
+                landStandard: '',
+                supplyMethod: '',
+                landUseType: '',
+                floorAreaRatio: '',
+                intensiveEvaluation: '',
+                illegalLandArea: '',
+                landFee: '',
+                landFeeGrade: '',
+                landFeeStandard: '',
+                landFeeArea: '',
+                planIndexSource: ''
+            },
+            step7: {
+                evaluationUnit: '',
+                evaluationQualification: '',
+                evaluationLevel: '',
+                evaluationDate: '',
+                expertReviewDate: '',
+                geologyConclusion: '',
+                mineralOverlap: '',
+                mineralEvaluation: ''
+            },
+            step8: {
+                selectedCase: '',
+                petitionStatus: '',
+                illegalArea: '',
+                illegalType: '',
+                rectificationStatus: '',
+                penaltyNumber: '',
+                rectificationMeasures: ''
+            }
+        };
+
+        function loadData() {
+            var filledCount = 0;
+            var emptyCount = 0;
+
+            for (var step in reportData) {
+                var storedData = localStorage.getItem(step + 'Data');
+                if (storedData) {
+                    try {
+                        var parsedData = JSON.parse(storedData);
+                        reportData[step] = { ...reportData[step], ...parsedData };
+                    } catch (e) {
+                        console.error('Failed to parse stored data for ' + step, e);
+                    }
+                }
+
+                for (var key in reportData[step]) {
+                    var value = reportData[step][key];
+                    var elementId = 'p' + step.replace('step', '') + '-' + key.replace(/([A-Z])/g, '-$1').toLowerCase();
+                    var element = document.getElementById(elementId);
+                    
+                    if (element) {
+                        if (value && value.trim()) {
+                            element.textContent = value;
+                            element.classList.remove('empty');
+                            filledCount++;
+                        } else {
+                            element.textContent = '-';
+                            element.classList.add('empty');
+                            emptyCount++;
+                        }
+                    }
+                }
+            }
+
+            document.getElementById('filled-count').textContent = filledCount;
+            document.getElementById('empty-count').textContent = emptyCount;
+            
+            var total = filledCount + emptyCount;
+            var rate = total > 0 ? Math.round((filledCount / total) * 100) : 0;
+            document.getElementById('completion-rate').textContent = rate;
+            document.getElementById('progress-fill').style.width = rate + '%';
+            document.getElementById('progress-text').textContent = filledCount + '/' + total + ' 已完成';
+        }
+
+        function goToStep(url) {
+            window.location.href = url;
+        }
+
+        function goBack() {
+            var fromPage = localStorage.getItem('fromPage');
+            if (fromPage) {
+                localStorage.removeItem('fromPage');
+                window.location.href = fromPage;
+            } else {
+                window.location.href = '第1步页面设计.html';
+            }
+        }
+
+        function goToFullReport() {
+            window.location.href = '兴宁五塘风电场一期_审查报告.md';
+        }
+
+        function showJSON() {
+            var allData = {};
+            for (var i = 1; i <= 8; i++) {
+                var stored = localStorage.getItem('step' + i + 'Data');
+                if (stored) {
+                    allData['step' + i] = JSON.parse(stored);
+                } else {
+                    allData['step' + i] = reportData['step' + i];
+                }
+            }
+            var jsonStr = JSON.stringify(allData, null, 2);
+            var blob = new Blob([jsonStr], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            window.open(url);
+        }
+
+        function downloadReport() {
+            alert('审查报告已导出！\n\n文件格式：建设用地报批审查报告_' + new Date().toLocaleDateString('zh-CN') + '.doc');
+        }
+
+        window.onload = function() {
+            loadData();
+        };
+    </script>
+</body>
+</html>

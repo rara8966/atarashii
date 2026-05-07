@@ -1,0 +1,17 @@
+server:
+  port: 8080
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 80MB
+      max-request-size: 90MB
+
+app:
+  policy-card-path: ../../2025重大项目用地政策明白卡.pdf
+  template-policy-path: ../../自然资源部办公厅关于进一步规范建设用地报批文本格式的函（自然资办函〔2024〕1009号）.pdf
+  ollama-base-url: http://localhost:11434
+  ollama-model: qwen25vl-7b-local:latest
+  ollama-fallback-model: qwen25vl-3b-local:latest
+  ollama-enabled: true
+  ollama-timeout-seconds: 20

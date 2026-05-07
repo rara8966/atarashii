@@ -1,0 +1,38 @@
+# Local environments
+.venv/
+.env
+.env.*
+
+# Build and runtime artifacts
+.copilot-temp/
+.runtime/
+PolicyReportDemo/
+policy-report-demo/PolicyReportDemo/
+*.zip
+*.exe
+*.msi
+*.log
+*.tmp
+
+# Java/Maven
+**/target/
+.m2/
+
+# Node/Vite
+**/node_modules/
+**/dist/
+**/*.tsbuildinfo
+npm-cache/
+
+# App local data and self-test output
+**/data/
+**/.copilot-test/
+analysis-result.json
+report-request.json
+report-result.json
+report-empty-request.json
+report-empty-result.json
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第三步：农用地转用情况 — 兴宁五塘风电场一期</title>
+    <style>
+        :root {
+            --primary: #1a5fdc;
+            --primary-light: #e8f0fe;
+            --success: #0d9e6c;
+            --success-light: #e6f7f1;
+            --warning: #e8870a;
+            --warning-light: #fff8ed;
+            --danger: #d93025;
+            --danger-light: #fce8e6;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --radius: 8px;
+            --radius-lg: 12px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            --transition: 0.2s ease;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+            background: #f1f5f9;
+            color: var(--gray-800);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .top-bar {
+            background: #fff;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .top-bar .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .top-bar .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .top-bar .title {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+        .top-bar .project-type-badge {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .step-indicator-wrap {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px 20px 0;
+        }
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: #fff;
+            border-radius: var(--radius-lg);
+            padding: 18px 24px;
+            box-shadow: var(--shadow-sm);
+            flex-wrap: wrap;
+        }
+        .step-indicator .step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--gray-400);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .step-indicator .step .num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid var(--gray-300);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            flex-shrink: 0;
+            background: #fff;
+        }
+        .step-indicator .step.active .num {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+        .step-indicator .step.active {
+            color: var(--primary);
+            font-weight: 700;
+        }
+        .step-indicator .step.done .num {
+            background: var(--success);
+            border-color: var(--success);
+            color: #fff;
+        }
+        .step-indicator .step.done {
+            color: var(--success);
+        }
+        .step-indicator .arrow {
+            color: var(--gray-300);
+            margin: 0 8px;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px 20px 40px;
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+        }
+        @media (max-width: 1024px) {
+            .main-container {
+                flex-direction: column;
+            }
+        }
+        .card {
+            background: #fff;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--gray-100);
+            font-weight: 700;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-body {
+            padding: 20px;
+        }
+        .card-header .icon-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .icon-upload {
+            background: #e8f0fe;
+            color: var(--primary);
+        }
+        .icon-preview {
+            background: #e6f7f1;
+            color: var(--success);
+        }
+        .upload-panel {
+            flex: 0 0 420px;
+            max-width: 420px;
+            min-width: 360px;
+        }
+        @media (max-width: 1024px) {
+            .upload-panel {
+                flex: 1 1 auto;
+                max-width: 100%;
+                min-width: auto;
+            }
+        }
+        .upload-item {
+            border: 2px dashed var(--gray-200);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin-bottom: 12px;
+            transition: all var(--transition);
+            position: relative;
+            cursor: pointer;
+            background: var(--gray-50);
+        }
+        .upload-item:hover {
+            border-color: var(--primary);
+            background: #f8faff;
+        }
+        .upload-item.uploaded {
+            border-style: solid;
+            border-color: var(--success);
+            background: var(--success-light);
+            cursor: default;
+        }
+        .upload-item.warning-state {
+            border-style: solid;
+            border-color: var(--warning);
+            background: var(--warning-light);
+        }
+        .upload-item.error-state {
+            border-style: solid;
+            border-color: var(--danger);
+            background: var(--danger-light);
+        }
+        .upload-item .item-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .upload-item .item-title-area {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 0;
+        }
+        .upload-item .item-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #fff;
+            border: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .upload-item .item-label {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--gray-800);
+            line-height: 1.3;
+        }
+        .upload-item .item-sub {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 2px;
+        }
+        .badge-required {
+            background: var(--danger);
+            color: #fff;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .badge-optional {
+            background: var(--gray-300);
+            color: var(--gray-600);
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .upload-item .file-info {
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--gray-600);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .upload-item .file-info .file-name {
+            font-weight: 500;
+            color: var(--gray-700);
+            word-break: break-all;
+        }
+        .status-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .status-ok {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status-warn {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .status-err {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .upload-item .replace-btn {
+            font-size: 11px;
+            color: var(--primary);
+            cursor: pointer;
+            background: none;
+            border: none;
+            text-decoration: underline;
+            padding: 0;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .upload-item .replace-btn:hover {
+            color: #0d47d0;
+        }
+        .upload-item input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .upload-item.uploaded input[type="file"] {
+            pointer-events: none;
+        }
+        .upload-item.uploaded .upload-hint {
+            display: none;
+        }
+        .upload-hint {
+            font-size: 11px;
+            color: var(--gray-400);
+            margin-top: 4px;
+        }
+        .preview-panel {
+            flex: 1;
+            min-width: 0;
+            overflow-y: auto;
+        }
+        .preview-section {
+            margin-bottom: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--gray-100);
+        }
+        .preview-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .preview-section h4 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--gray-500);
+            margin-bottom: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .preview-section h4 .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .dot-blue {
+            background: var(--primary);
+        }
+        .dot-green {
+            background: var(--success);
+        }
+        .dot-orange {
+            background: var(--warning);
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .data-table th,
+        .data-table td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-100);
+            vertical-align: middle;
+        }
+        .data-table th {
+            background: var(--gray-50);
+            font-weight: 600;
+            color: var(--gray-600);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .data-table .field-source {
+            font-size: 10px;
+            color: var(--primary);
+            font-weight: 500;
+            margin-left: 4px;
+        }
+        .data-table .modify-btn {
+            color: var(--primary);
+            background: none;
+            border: 1px solid var(--primary);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .data-table .modify-btn:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+        .data-table .highlight-change {
+            background: #fffef0;
+            font-weight: 500;
+        }
+        .val-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .val-pass {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .val-warn {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .val-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .val-err {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .action-bar {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            border-top: 1px solid var(--gray-100);
+            padding-top: 16px;
+        }
+        .btn {
+            padding: 11px 28px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all var(--transition);
+            letter-spacing: 0.2px;
+            font-family: inherit;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: var(--shadow-sm);
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #1557c8;
+            box-shadow: var(--shadow-md);
+        }
+        .btn-primary:disabled {
+            background: var(--gray-300);
+            color: var(--gray-500);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .btn-secondary {
+            background: #fff;
+            color: var(--gray-700);
+            border: 1px solid var(--gray-300);
+        }
+        .btn-secondary:hover {
+            background: var(--gray-50);
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1100;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            box-shadow: var(--shadow-lg);
+            animation: slideIn 0.3s ease;
+            max-width: 400px;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(120%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        .toast-success {
+            background: #059669;
+        }
+        .toast-error {
+            background: #dc2626;
+        }
+        .toast-warning {
+            background: #d97706;
+        }
+        .missing-files-hint {
+            font-size: 12px;
+            color: var(--danger);
+            font-weight: 600;
+            margin-top: 4px;
+            display: none;
+        }
+        .missing-files-hint.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="logo-area">
+            <div class="logo-icon">📋</div>
+            <span class="title">建设用地报批审查报告智能生成系统</span>
+        </div>
+        <span class="project-type-badge">📌 单独选址建设项目：兴宁五塘风电场一期</span>
+    </div>
+
+    <div class="step-indicator-wrap">
+        <div class="step-indicator">
+            <a href="第1步页面设计.html"><div class="step done"><span class="num">1</span> 项目基本情况</div></a>
+            <span class="arrow">→</span>
+            <a href="第2步页面设计.html"><div class="step done"><span class="num">2</span> 申请用地现状</div></a>
+            <span class="arrow">→</span>
+            <div class="step active"><span class="num">3</span> 农用地转用情况</div>
+            <span class="arrow">→</span>
+            <a href="第4步页面设计.html"><div class="step"><span class="num">4</span> 补充耕地情况</div></a>
+            <span class="arrow">→</span>
+            <a href="第5步页面设计.html"><div class="step"><span class="num">5</span> 土地征收情况</div></a>
+            <span class="arrow">→</span>
+            <a href="第6步页面设计.html"><div class="step"><span class="num">6</span> 土地利用情况</div></a>
+            <span class="arrow">→</span>
+            <a href="第7步页面设计.html"><div class="step"><span class="num">7</span> 地灾与压矿</div></a>
+            <span class="arrow">→</span>
+            <a href="第8步页面设计.html"><div class="step"><span class="num">8</span> 信访与违法用地</div></a>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- 左侧上传区 -->
+        <div class="upload-panel">
+            <div class="card">
+                <div class="card-header">
+                    <span class="icon-circle icon-upload">📎</span>
+                    上传农转用审批所需材料
+                    <span style="font-weight:400;font-size:12px;color:var(--danger);margin-left:auto;">★ 必传文件（4份）</span>
+                </div>
+                <div class="card-body" id="uploadList">
+                    <!-- ① 国土空间规划佐证 -->
+                    <div class="upload-item uploaded" id="uploadItem-planning">
+                        <div class="item-header">
+                            <div class="item-title-area">
+                                <span class="item-icon">📄</span>
+                                <div>
+                                    <span class="item-label">① 国土空间总体规划佐证材料</span>
+                                    <div class="item-sub">规划局部图 + 规划文本节选 · 符合规划证明</div>
+                                </div>
+                            </div>
+                            <span class="badge-required">必传</span>
+                        </div>
+                        <div class="file-info">
+                            <span class="file-name">📄 南宁市国土空间总体规划局部图及文本.pdf</span>
+                            <span class="status-tag status-ok">✅ 解析完成</span>
+                            <button class="replace-btn" onclick="alert('演示模式：触发替换文件')">🔄 替换文件</button>
+                        </div>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-file-type="planning">
+                    </div>
+
+                    <!-- ② 永久基本农田补划方案 -->
+                    <div class="upload-item uploaded" id="uploadItem-farmland">
+                        <div class="item-header">
+                            <div class="item-title-area">
+                                <span class="item-icon">📄</span>
+                                <div>
+                                    <span class="item-label">② 永久基本农田补划方案</span>
+                                    <div class="item-sub">占用永农1.82公顷 · 含踏勘论证意见</div>
+                                </div>
+                            </div>
+                            <span class="badge-required">必传</span>
+                        </div>
+                        <div class="file-info">
+                            <span class="file-name">📄 永农补划方案及踏勘论证意见.pdf</span>
+                            <span class="status-tag status-ok">✅ 解析完成</span>
+                            <button class="replace-btn" onclick="alert('演示模式：触发替换文件')">🔄 替换文件</button>
+                        </div>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-file-type="farmland">
+                    </div>
+
+                    <!-- ③ 年度计划指标佐证 -->
+                    <div class="upload-item uploaded" id="uploadItem-planIndex">
+                        <div class="item-header">
+                            <div class="item-title-area">
+                                <span class="item-icon">📄</span>
+                                <div>
+                                    <span class="item-label">③ 年度新增建设用地计划指标文件</span>
+                                    <div class="item-sub">列入省级重大用地清单 · 申请由国家配置</div>
+                                </div>
+                            </div>
+                            <span class="badge-required">必传</span>
+                        </div>
+                        <div class="file-info">
+                            <span class="file-name">📄 桂自然资函〔2025〕××号.pdf</span>
+                            <span class="status-tag status-ok">✅ 解析完成</span>
+                            <button class="replace-btn" onclick="alert('演示模式：触发替换文件')">🔄 替换文件</button>
+                        </div>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-file-type="planIndex">
+                    </div>
+
+                    <!-- ④ 使用林地批复 -->
+                    <div class="upload-item uploaded" id="uploadItem-forestry">
+                        <div class="item-header">
+                            <div class="item-title-area">
+                                <span class="item-icon">📄</span>
+                                <div>
+                                    <span class="item-label">④ 使用林地审核同意书</span>
+                                    <div class="item-sub">风机基础占用林地 · 桂林地审〔2025〕××号</div>
+                                </div>
+                            </div>
+                            <span class="badge-required">必传</span>
+                        </div>
+                        <div class="file-info">
+                            <span class="file-name">📄 使用林地审核同意书.pdf</span>
+                            <span class="status-tag status-ok">✅ 解析完成</span>
+                            <button class="replace-btn" onclick="alert('演示模式：触发替换文件')">🔄 替换文件</button>
+                        </div>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-file-type="forestry">
+                    </div>
+
+                    <div style="border-top:1px dashed var(--gray-300);margin:16px 0 12px;padding-top:4px;">
+                        <span style="font-size:12px;color:var(--gray-500);font-weight:600;">○ 可选文件（根据占用情况上传）</span>
+                    </div>
+
+                    <!-- ⑤ 自然保护区意见 -->
+                    <div class="upload-item" id="uploadItem-natureReserve">
+                        <div class="item-header">
+                            <div class="item-title-area">
+                                <span class="item-icon">📄</span>
+                                <div>
+                                    <span class="item-label">⑤ 自然保护地占用意见</span>
+                                    <div class="item-sub">涉及自然保护地时提供 · 省级林业主管部门出具</div>
+                                </div>
+                            </div>
+                            <span class="badge-optional">本项目不涉及</span>
+                        </div>
+                        <div class="upload-hint">📤 本项目不涉及自然保护地，无需上传</div>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-file-type="natureReserve" disabled>
+                    </div>
+
+                    <!-- ⑥ 生态保护红线意见 -->
+                    <div class="upload-item" id="uploadItem-ecoRedline">
+                        <div class="item-header">
+                            <div class="item-title-area">
+                                <span class="item-icon">📄</span>
+                                <div>
+                                    <span class="item-label">⑥ 生态保护红线认定意见</span>
+                                    <div class="item-sub">涉及生态红线时提供 · 省级人民政府出具</div>
+                                </div>
+                            </div>
+                            <span class="badge-optional">本项目不涉及</span>
+                        </div>
+                        <div class="upload-hint">📤 本项目不涉及生态保护红线，无需上传</div>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-file-type="ecoRedline" disabled>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧解析数据预览区 -->
+        <div class="preview-panel">
+            <div class="card">
+                <div class="card-header">
+                    <span class="icon-circle icon-preview">🔍</span>
+                    解析数据预览与核对
+                    <span style="font-weight:400;font-size:11px;color:var(--gray-500);margin-left:auto;">数据已从上传文件及前序步骤中自动提取，请核对修改</span>
+                </div>
+                <div class="card-body">
+                    <!-- 农用地转用面积 -->
+                    <div class="preview-section">
+                        <h4><span class="dot dot-blue"></span> 农用地转用面积（继承自第二步）</h4>
+                        <table class="data-table">
+                            <thead><tr><th>字段名称</th><th>面积（公顷）</th><th>数据来源</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr><td>申请转用总面积</td><td><strong>14.05</strong></td><td><span class="field-source">📎 第二步：申请用地现状</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>其中：农用地</td><td>12.88</td><td><span class="field-source">📎 第二步</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>　耕地</td><td>4.12</td><td><span class="field-source">📎 第二步</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>　　含永久基本农田</td><td>1.82</td><td><span class="field-source">📎 第二步</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>其中：未利用地</td><td>0.97</td><td><span class="field-source">📎 第二步</span></td><td><button class="modify-btn">修改</button></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 农转用分类明细 -->
+                    <div class="preview-section">
+                        <h4><span class="dot dot-blue"></span> 农转用分类明细（系统自动汇总）</h4>
+                        <table class="data-table">
+                            <thead><tr><th>权属</th><th>农用地（公顷）</th><th>其中耕地（公顷）</th><th>其中永农（公顷）</th><th>未利用地（公顷）</th><th>数据来源</th></tr></thead>
+                            <tbody>
+                                <tr><td>农民集体所有</td><td>11.20</td><td>3.78</td><td>1.82</td><td>0.80</td><td><span class="field-source">📎 系统计算</span></td></tr>
+                                <tr><td>国有</td><td>1.68</td><td>0.34</td><td>0</td><td>0.17</td><td><span class="field-source">📎 系统计算</span></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 规划与保护地情况 -->
+                    <div class="preview-section">
+                        <h4><span class="dot dot-blue"></span> 规划与保护地情况</h4>
+                        <table class="data-table">
+                            <thead><tr><th>字段名称</th><th>解析值</th><th>数据来源</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr><td>是否符合规划</td><td>已纳入</td><td><span class="field-source">📎 规划佐证材料</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>规划名称</td><td>《南宁市国土空间总体规划（2021—2035年）》</td><td><span class="field-source">📎 规划批复文件</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>单独选址类型</td><td>项目位于城镇开发边界外，属单独选址建设用地项目</td><td><span class="field-source">系统判断</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>是否涉及自然保护区</td><td><span class="val-badge val-pass">不涉及</span></td><td><span class="field-source">📎 林业部门查询</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>是否涉及生态保护红线</td><td><span class="val-badge val-pass">不涉及</span></td><td><span class="field-source">📎 自然资源部门查询</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>是否涉及林草地</td><td><span class="val-badge val-warn">涉及</span></td><td><span class="field-source">📎 林地批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>林地审批文号</td><td>桂林地审〔2025〕××号</td><td><span class="field-source">📎 林地批复</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>是否涉及采矿许可</td><td><span class="val-badge val-pass">不涉及</span></td><td><span class="field-source">📎 项目初设</span></td><td><button class="modify-btn">修改</button></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 永久基本农田补划情况 -->
+                    <div class="preview-section">
+                        <h4><span class="dot dot-orange"></span> 永久基本农田补划情况</h4>
+                        <table class="data-table">
+                            <thead><tr><th>字段名称</th><th>解析值</th><th>数据来源</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr><td>申请占用永久基本农田面积</td><td>1.82公顷</td><td><span class="field-source">📎 第二步</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>占用永农理由</td><td>风机机位无法避让，经比选论证为最少占用方案</td><td><span class="field-source">📎 永农补划方案</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>占用永农平均质量等别</td><td>8等</td><td><span class="field-source">📎 永农补划方案</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>补划面积</td><td>1.82公顷</td><td><span class="field-source">📎 永农补划方案</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>补划平均质量等别</td><td>8等</td><td><span class="field-source">📎 永农补划方案</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>补划耕地坡度</td><td>均小于25度</td><td><span class="field-source">📎 永农补划方案</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>踏勘论证日期</td><td>2025-04-10</td><td><span class="field-source">📎 踏勘论证意见</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>踏勘论证结论</td><td>占用合理，补划方案通过论证</td><td><span class="field-source">📎 踏勘论证意见</span></td><td><button class="modify-btn">修改</button></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 年度计划指标 -->
+                    <div class="preview-section">
+                        <h4><span class="dot dot-blue"></span> 年度土地利用计划指标情况</h4>
+                        <table class="data-table">
+                            <thead><tr><th>字段名称</th><th>解析值</th><th>数据来源</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr><td>需转为建设用地面积</td><td>13.85公顷（农用地12.88 + 未利用地0.97）</td><td><span class="field-source">📎 系统计算</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>指标配置方式</td><td>已列入省级人民政府重大项目用地清单，申请由国家配置计划</td><td><span class="field-source">系统选择</span></td><td><button class="modify-btn">修改</button></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 预审意见落实情况 -->
+                    <div class="preview-section">
+                        <h4><span class="dot dot-green"></span> 用地预审意见落实情况</h4>
+                        <table class="data-table">
+                            <thead><tr><th>字段名称</th><th>解析值</th><th>数据来源</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr><td>预审批复层级</td><td>广西壮族自治区自然资源厅</td><td><span class="field-source">📎 第一步</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>预审与立项层级一致性</td><td><span class="val-badge val-pass">✅ 一致</span></td><td><span class="field-source">系统对比</span></td><td>—</td></tr>
+                                <tr><td>申报面积与预审规模对比</td><td>申报14.05公顷 vs 预审12.86公顷（超出9.25%）</td><td><span class="field-source">系统计算</span></td><td><button class="modify-btn">填写理由</button></td></tr>
+                                <tr><td>超出预审原因</td><td>初设阶段道路工程优化，新增部分进场道路用地</td><td><span class="field-source">📎 用户填写</span></td><td><button class="modify-btn">修改</button></td></tr>
+                                <tr><td>永农占用量变化</td><td>与预审一致，均为1.82公顷</td><td><span class="field-source">系统对比</span></td><td>—</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 情形选择器：自然保护区情况 -->
+                    <div class="preview-section">
+                        <h4><span class="dot dot-orange"></span> 自然保护区情况</h4>
+                        <div class="case-selector" id="caseNatureReserve">
+                            <div class="case-card selected" data-case="1" onclick="selectCase3('natureReserve',1)">
+                                <span class="case-num">①</span>
+                                <span class="case-desc">不位于各级自然保护区</span>
+                            </div>
+                            <div class="case-card" data-case="2" onclick="selectCase3('natureReserve',2)">
+                                <span class="case-num">②</span>
+                                <span class="case-desc">穿越但不申请用地</span>
+                            </div>
+                            <div class="case-card" data-case="3" onclick="selectCase3('natureReserve',3)">
+                                <span class="case-num">③</span>
+                                <span class="case-desc">涉及且申请用地</span>
+                            </div>
+                        </div>
+                        <p style="font-size:11px;color:var(--gray-500);margin-top:8px;">当前选择：<strong id="natureReserveSelected">不位于各级自然保护区</strong></p>
+                    </div>
+
+                    <!-- 情形选择器：生态保护红线情况 -->
+                    <div class="preview-section">
+                        <h4><span class="dot dot-orange"></span> 生态保护红线情况</h4>
+                        <div class="case-selector" id="caseEcoRedline">
+                            <div class="case-card selected" data-case="1" onclick="selectCase3('ecoRedline',1)">
+                                <span class="case-num">①</span>
+                                <span class="case-desc">不涉及生态红线</span>
+                            </div>
+                            <div class="case-card" data-case="2" onclick="selectCase3('ecoRedline',2)">
+                                <span class="case-num">②</span>
+                                <span class="case-desc">穿越但不申请用地</span>
+                            </div>
+                            <div class="case-card" data-case="3" onclick="selectCase3('ecoRedline',3)">
+                                <span class="case-num">③</span>
+                                <span class="case-desc">涉及且符合有限人为活动</span>
+                            </div>
+                            <div class="case-card" data-case="4" onclick="selectCase3('ecoRedline',4)">
+                                <span class="case-num">④</span>
+                                <span class="case-desc">涉及且为国家重大项目</span>
+                            </div>
+                        </div>
+                        <p style="font-size:11px;color:var(--gray-500);margin-top:8px;">当前选择：<strong id="ecoRedlineSelected">不涉及生态红线</strong></p>
+                    </div>
+
+                    <!-- 情形选择器：土地利用计划情况 -->
+                    <div class="preview-section">
+                        <h4><span class="dot dot-orange"></span> 土地利用计划情况</h4>
+                        <div class="case-selector" id="casePlan">
+                            <div class="case-card selected" data-case="1" onclick="selectCase3('plan',1)">
+                                <span class="case-num">①</span>
+                                <span class="case-desc">列入重大项目清单</span>
+                            </div>
+                            <div class="case-card" data-case="2" onclick="selectCase3('plan',2)">
+                                <span class="case-num">②</span>
+                                <span class="case-desc">未列入重大项目清单</span>
+                            </div>
+                        </div>
+                        <p style="font-size:11px;color:var(--gray-500);margin-top:8px;">当前选择：<strong id="planSelected">列入重大项目清单</strong></p>
+                    </div>
+
+                    <!-- 情形选择器：永久基本农田补划情况 -->
+                    <div class="preview-section">
+                        <h4><span class="dot dot-orange"></span> 永久基本农田补划情况</h4>
+                        <div class="case-selector" id="caseBasicFarmland">
+                            <div class="case-card selected" data-case="1" onclick="selectCase3('basicFarmland',1)">
+                                <span class="case-num">①</span>
+                                <span class="case-desc">涉及占用永久基本农田</span>
+                            </div>
+                            <div class="case-card" data-case="2" onclick="selectCase3('basicFarmland',2)">
+                                <span class="case-num">②</span>
+                                <span class="case-desc">不涉及占用永久基本农田</span>
+                            </div>
+                        </div>
+                        <p style="font-size:11px;color:var(--gray-500);margin-top:8px;">当前选择：<strong id="basicFarmlandSelected">涉及占用永久基本农田</strong></p>
+                    </div>
+
+                    <!-- 系统实时校验结果 -->
+                    <div class="preview-section" style="border-bottom:none;">
+                        <h4><span class="dot dot-orange"></span> 系统实时校验结果</h4>
+                        <table class="data-table">
+                            <thead><tr><th>校验项</th><th>结果</th><th>说明</th></tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td>农转用面积与申请用地一致性</td>
+                                    <td><span class="val-badge val-pass">✅ 通过</span></td>
+                                    <td>转用面积（农用地12.88 + 未利用地0.97）= 申请用地14.05 - 建设用地0.20 = 13.85公顷，计算无误</td>
+                                </tr>
+                                <tr>
+                                    <td>规划符合性</td>
+                                    <td><span class="val-badge val-pass">✅ 通过</span></td>
+                                    <td>项目已纳入经批准的《南宁市国土空间总体规划（2021—2035年）》，属单独选址项目</td>
+                                </tr>
+                                <tr>
+                                    <td>生态保护红线占用</td>
+                                    <td><span class="val-badge val-pass">✅ 不涉及</span></td>
+                                    <td>项目不位于生态保护红线范围内</td>
+                                </tr>
+                                <tr>
+                                    <td>自然保护区占用</td>
+                                    <td><span class="val-badge val-pass">✅ 不涉及</span></td>
+                                    <td>项目不位于各级自然保护区</td>
+                                </tr>
+                                <tr>
+                                    <td>计划指标配置</td>
+                                    <td><span class="val-badge val-pass">✅ 已落实</span></td>
+                                    <td>列入省级重大用地清单，申请由国家配置计划指标</td>
+                                </tr>
+                                <tr>
+                                    <td>预审意见落实</td>
+                                    <td><span class="val-badge val-info">📝 已载明</span></td>
+                                    <td>预审层级与立项层级一致；永农占用量未变化</td>
+                                </tr>
+                                <tr>
+                                    <td>预审规模超出</td>
+                                    <td><span class="val-badge val-warn">⚠️ 超出9.25%</span></td>
+                                    <td>申报面积超出预审控制规模，但未超过10%阈值，已填写原因说明</td>
+                                </tr>
+                                <tr>
+                                    <td>永农补划</td>
+                                    <td><span class="val-badge val-pass">✅ 已落实</span></td>
+                                    <td>补划面积1.82公顷，质量等别8等，数量不减少、质量不降低</td>
+                                </tr>
+                                <tr>
+                                    <td>报批层级判定</td>
+                                    <td><span class="val-badge val-warn">⚠️ 国务院审批</span></td>
+                                    <td>涉及占用永久基本农田，应呈报国务院批准农用地转用及土地征收</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 操作按钮区域 -->
+                    <div class="action-bar">
+                        <button class="btn btn-secondary" onclick="saveStepData(3)">💾 保存草稿</button>
+                        <button class="btn btn-info" onclick="previewReport()">👁️ 预览审查报告</button>
+                        <button class="btn btn-primary" id="btnNext" onclick="saveAndNext(3)">保存并进入下一步 →</button>
+                    </div>
+                    <p style="font-size:11px; color:var(--gray-400); margin-top:8px; text-align:right;">
+                        💡 生态红线/自然保护地数据已通过系统校验，占用永农需报国务院审批
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        // 全局存储所有情形选择
+        var step3Cases = {
+            natureReserve: '1',
+            ecoRedline: '1',
+            plan: '1',
+            basicFarmland: '1'
+        };
+
+        // 全局情形描述文本
+        var case3Descriptions = {
+            natureReserve: ['', '不位于各级自然保护区', '穿越但不申请用地', '涉及且申请用地'],
+            ecoRedline: ['', '不涉及生态红线', '穿越但不申请用地', '涉及且符合有限人为活动', '涉及且为国家重大项目'],
+            plan: ['', '列入重大项目清单', '未列入重大项目清单'],
+            basicFarmland: ['', '涉及占用永久基本农田', '不涉及占用永久基本农田']
+        };
+
+        // 根据兴宁区项目真实数据自动匹配情形
+        function autoMatchStep3Cases() {
+            // 从localStorage获取现有数据（如果有）
+            var savedData = JSON.parse(localStorage.getItem('step3Data') || '{}');
+            
+            // 如果已有case数据，直接使用
+            if (savedData.caseNatureReserve) {
+                step3Cases.natureReserve = savedData.caseNatureReserve;
+            } else {
+                // 根据兴宁区项目数据：不涉及自然保护区
+                step3Cases.natureReserve = '1';
+            }
+            
+            if (savedData.caseEcoRedline) {
+                step3Cases.ecoRedline = savedData.caseEcoRedline;
+            } else {
+                // 根据兴宁区项目数据：不涉及生态保护红线
+                step3Cases.ecoRedline = '1';
+            }
+            
+            if (savedData.casePlan) {
+                step3Cases.plan = savedData.casePlan;
+            } else {
+                // 根据兴宁区项目数据：已列入省级人民政府重大项目用地清单
+                step3Cases.plan = '1';
+            }
+            
+            if (savedData.caseBasicFarmland) {
+                step3Cases.basicFarmland = savedData.caseBasicFarmland;
+            } else {
+                // 根据兴宁区项目数据：申请占用永久基本农田1.82公顷
+                step3Cases.basicFarmland = '1';
+            }
+            
+            // 更新UI显示
+            updateStep3CaseUI();
+        }
+
+        // 更新第3步情形UI显示
+        function updateStep3CaseUI() {
+            selectCase3('natureReserve', step3Cases.natureReserve, false);
+            selectCase3('ecoRedline', step3Cases.ecoRedline, false);
+            selectCase3('plan', step3Cases.plan, false);
+            selectCase3('basicFarmland', step3Cases.basicFarmland, false);
+        }
+
+        // 统一的情形选择器函数
+        function selectCase3(type, caseNum, autoSave) {
+            if (autoSave === undefined) autoSave = true;
+            step3Cases[type] = String(caseNum);
+            var selectorId = 'case' + type.charAt(0).toUpperCase() + type.slice(1);
+            var container = document.getElementById(selectorId);
+            if (container) {
+                var cards = container.querySelectorAll('.case-card');
+                cards.forEach(function(card) {
+                    card.classList.remove('selected');
+                    if (card.getAttribute('data-case') == caseNum) {
+                        card.classList.add('selected');
+                    }
+                });
+            }
+            var labelId = type + 'Selected';
+            var labelEl = document.getElementById(labelId);
+            if (labelEl) {
+                labelEl.textContent = case3Descriptions[type][caseNum];
+            }
+            if (autoSave) {
+                saveStepData(3);
+            }
+        }
+
+        // 保存当前步骤数据到JSON（localStorage）
+        function saveStepData(step) {
+            var tables = document.querySelectorAll('table');
+            var data = {};
+            tables.forEach(function(table) {
+                var rows = table.querySelectorAll('tbody tr');
+                rows.forEach(function(row) {
+                    var cells = row.querySelectorAll('td');
+                    if (cells.length >= 2) {
+                        var label = cells[0].textContent.trim();
+                        var value = cells[1].textContent.trim();
+                        if (label.includes('农用地') && !label.includes('耕地')) data.agriculturalArea = value;
+                        else if (label.includes('耕地') && !label.includes('永久') && !label.includes('含永')) data.cultivatedArea = value;
+                        else if (label.includes('永久基本农田') || label.includes('含永农')) data.basicFarmlandArea = value;
+                        else if (label.includes('未利用地') && !label.includes('建设')) data.unusedArea = value;
+                        else if (label.includes('申请占用永农')) data.basicFarmlandApply = value;
+                        else if (label.includes('占用永农平均质量')) data.basicFarmlandQuality = value;
+                        else if (label.includes('补划面积')) data.supplementArea = value;
+                        else if (label.includes('补划平均质量')) data.supplementQuality = value;
+                        else if (label.includes('踏勘论证日期')) data.surveyDate = value;
+                        else if (label.includes('需转为建设用地')) data.conversionArea = value;
+                    }
+                });
+            });
+            // 添加所有情形选择数据
+            data.caseNatureReserve = step3Cases.natureReserve;
+            data.caseEcoRedline = step3Cases.ecoRedline;
+            data.casePlan = step3Cases.plan;
+            data.caseBasicFarmland = step3Cases.basicFarmland;
+            localStorage.setItem('step' + step + 'Data', JSON.stringify(data));
+            console.log('✅ 第' + step + '步数据已保存:', JSON.stringify(data));
+            return data;
+        }
+
+        // 预览审查报告
+        function previewReport() {
+            localStorage.setItem('fromPage', '第3步页面设计.html');
+            window.location.href = '兴宁五塘风电场一期_审查报告.md';
+        }
+
+        StepApp.init(3);
+        console.log('✅ 第三步界面已加载：农用地转用情况 - 兴宁五塘风电场一期');
+        console.log('📋 本步骤涉及：规划符合性、永农补划、计划指标、预审落实');
+        console.log('⚠️ 因占用永农，报批层级为：国务院审批');
+        
+        // 页面加载时自动匹配情形
+        document.addEventListener('DOMContentLoaded', function() {
+            autoMatchStep3Cases();
+        });
+    </script>
+</body>
+</html>

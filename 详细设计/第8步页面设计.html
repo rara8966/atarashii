@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第八步：信访与违法用地处理 — 兴宁五塘风电场一期</title>
+    <style>
+        :root {
+            --primary: #1a5fdc;
+            --primary-light: #e8f0fe;
+            --success: #0d9e6c;
+            --success-light: #e6f7f1;
+            --warning: #e8870a;
+            --warning-light: #fff8ed;
+            --danger: #d93025;
+            --danger-light: #fce8e6;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --radius: 8px;
+            --radius-lg: 12px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            --transition: 0.2s ease;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+            background: #f1f5f9;
+            color: var(--gray-800);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .top-bar {
+            background: #fff;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .top-bar .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .top-bar .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .top-bar .title {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+        .top-bar .project-type-badge {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .step-indicator-wrap {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px 20px 0;
+        }
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: #fff;
+            border-radius: var(--radius-lg);
+            padding: 18px 24px;
+            box-shadow: var(--shadow-sm);
+            flex-wrap: wrap;
+        }
+        .step-indicator .step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--gray-400);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .step-indicator .step .num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid var(--gray-300);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            flex-shrink: 0;
+            background: #fff;
+        }
+        .step-indicator .step.active .num {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+        .step-indicator .step.active {
+            color: var(--primary);
+            font-weight: 700;
+        }
+        .step-indicator .step.done .num {
+            background: var(--success);
+            border-color: var(--success);
+            color: #fff;
+        }
+        .step-indicator .step.done {
+            color: var(--success);
+        }
+        .step-indicator .arrow {
+            color: var(--gray-300);
+            margin: 0 8px;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px 20px 40px;
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+        }
+        @media (max-width: 1024px) {
+            .main-container { flex-direction: column; }
+        }
+        .card {
+            background: #fff;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--gray-100);
+            font-weight: 700;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-body { padding: 20px; }
+        .card-header .icon-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .icon-upload { background: #e8f0fe; color: var(--primary); }
+        .icon-preview { background: #e6f7f1; color: var(--success); }
+        .upload-panel {
+            flex: 0 0 420px;
+            max-width: 420px;
+            min-width: 360px;
+        }
+        @media (max-width: 1024px) {
+            .upload-panel { flex: 1 1 auto; max-width: 100%; min-width: auto; }
+        }
+        .upload-item {
+            border: 2px dashed var(--gray-200);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin-bottom: 12px;
+            transition: all var(--transition);
+            position: relative;
+            cursor: pointer;
+            background: var(--gray-50);
+        }
+        .upload-item:hover { border-color: var(--primary); background: #f8faff; }
+        .upload-item.uploaded {
+            border-style: solid;
+            border-color: var(--success);
+            background: var(--success-light);
+            cursor: default;
+        }
+        .upload-item.disabled-item {
+            opacity: 0.6;
+            cursor: not-allowed;
+            border-style: dashed;
+            border-color: var(--gray-200);
+            background: var(--gray-50);
+        }
+        .upload-item .item-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .upload-item .item-title-area {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 0;
+        }
+        .upload-item .item-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #fff;
+            border: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .upload-item .item-label {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--gray-800);
+            line-height: 1.3;
+        }
+        .upload-item .item-sub {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 2px;
+        }
+        .badge-required {
+            background: var(--danger);
+            color: #fff;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .badge-optional {
+            background: var(--gray-300);
+            color: var(--gray-600);
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .upload-item .file-info {
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--gray-600);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .upload-item .file-info .file-name {
+            font-weight: 500;
+            color: var(--gray-700);
+            word-break: break-all;
+        }
+        .status-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .status-ok { background: #d1fae5; color: #065f46; }
+        .status-warn { background: #fef3c7; color: #92400e; }
+        .status-err { background: #fee2e2; color: #991b1b; }
+        .upload-item .replace-btn {
+            font-size: 11px;
+            color: var(--primary);
+            cursor: pointer;
+            background: none;
+            border: none;
+            text-decoration: underline;
+            padding: 0;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .upload-item .replace-btn:hover { color: #0d47d0; }
+        .upload-item input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .upload-item.uploaded input[type="file"] { pointer-events: none; }
+        .upload-item.disabled-item input[type="file"] { pointer-events: none; cursor: not-allowed; }
+        .upload-item.uploaded .upload-hint { display: none; }
+        .upload-hint {
+            font-size: 11px;
+            color: var(--gray-400);
+            margin-top: 4px;
+        }
+        .preview-panel {
+            flex: 1;
+            min-width: 0;
+            overflow-y: auto;
+        }
+        .preview-section {
+            margin-bottom: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--gray-100);
+        }
+        .preview-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .preview-section h4 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--gray-500);
+            margin-bottom: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .preview-section h4 .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .dot-blue { background: var(--primary); }
+        .dot-green { background: var(--success); }
+        .dot-orange { background: var(--warning); }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .data-table th, .data-table td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-100);
+            vertical-align: middle;
+        }
+        .data-table th {
+            background: var(--gray-50);
+            font-weight: 600;
+            color: var(--gray-600);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .data-table .field-source {
+            font-size: 10px;
+            color: var(--primary);
+            font-weight: 500;
+            margin-left: 4px;
+        }
+        .data-table .modify-btn {
+            color: var(--primary);
+            background: none;
+            border: 1px solid var(--primary);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .data-table .modify-btn:hover { background: var(--primary); color: #fff; }
+        .val-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .val-pass { background: #d1fae5; color: #065f46; }
+        .val-warn { background: #fef3c7; color: #92400e; }
+        .val-info { background: #dbeafe; color: #1e40af; }
+        .val-err { background: #fee2e2; color: #991b1b; }
+        .action-bar {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            border-top: 1px solid var(--gray-100);
+            padding-top: 16px;
+        }
+        .btn {
+            padding: 11px 28px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all var(--transition);
+            letter-spacing: 0.2px;
+            font-family: inherit;
+        }
+        .btn-primary { background: var(--primary); color: #fff; box-shadow: var(--shadow-sm); }
+        .btn-primary:hover:not(:disabled) { background: #1557c8; box-shadow: var(--shadow-md); }
+        .btn-primary:disabled { background: var(--gray-300); color: var(--gray-500); cursor: not-allowed; box-shadow: none; }
+        .btn-secondary { background: #fff; color: var(--gray-700); border: 1px solid var(--gray-300); }
+        .btn-secondary:hover { background: var(--gray-50); }
+        .btn-success {
+            background: var(--success);
+            color: #fff;
+            box-shadow: var(--shadow-sm);
+        }
+        .btn-success:hover:not(:disabled) { background: #0b8a5e; box-shadow: var(--shadow-md); }
+        .btn-success:disabled { background: var(--gray-300); color: var(--gray-500); cursor: not-allowed; }
+        .case-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .case-card {
+            flex: 1;
+            min-width: 160px;
+            padding: 12px 14px;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all var(--transition);
+            text-align: center;
+            font-size: 12px;
+            font-weight: 500;
+            background: #fff;
+        }
+        .case-card:hover { border-color: var(--primary); background: #f8faff; }
+        .case-card.selected { border-color: var(--primary); background: var(--primary-light); font-weight: 700; }
+        .case-card .case-num {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            display: block;
+            margin-bottom: 4px;
+        }
+        .case-card .case-desc { color: var(--gray-600); font-size: 11px; line-height: 1.4; }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="logo-area">
+            <div class="logo-icon">📋</div>
+            <span class="title">建设用地报批审查报告智能生成系统</span>
+        </div>
+        <span class="project-type-badge">📌 单独选址建设项目：兴宁五塘风电场一期</span>
+    </div>
+    <div class="step-indicator-wrap">
+        <div class="step-indicator">
+            <a href="第1步页面设计.html"><div class="step done"><span class="num">1</span> 项目基本情况</div></a><span class="arrow">→</span>
+            <a href="第2步页面设计.html"><div class="step done"><span class="num">2</span> 申请用地现状</div></a><span class="arrow">→</span>
+            <a href="第3步页面设计.html"><div class="step done"><span class="num">3</span> 农用地转用情况</div></a><span class="arrow">→</span>
+            <a href="第4步页面设计.html"><div class="step done"><span class="num">4</span> 补充耕地情况</div></a><span class="arrow">→</span>
+            <a href="第5步页面设计.html"><div class="step done"><span class="num">5</span> 土地征收情况</div></a><span class="arrow">→</span>
+            <a href="第6步页面设计.html"><div class="step done"><span class="num">6</span> 土地利用情况</div></a><span class="arrow">→</span>
+            <a href="第7步页面设计.html"><div class="step done"><span class="num">7</span> 地灾与压矿</div></a><span class="arrow">→</span>
+            <div class="step active"><span class="num">8</span> 信访与违法用地</div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="upload-panel">
+            <div class="card">
+                <div class="card-header">
+                    <span class="icon-circle icon-upload">📎</span>
+                    上传信访与违法处理材料
+                    <span style="font-weight:400;font-size:12px;margin-left:auto;">条件必传文件</span>
+                </div>
+                <div class="card-body" id="uploadList">
+                    <!-- ① 信访处理说明（本项目无信访，不涉及） -->
+                    <div class="upload-item disabled-item" id="uploadItem-complaint">
+                        <div class="item-header">
+                            <div class="item-title-area">
+                                <span class="item-icon">📄</span>
+                                <div>
+                                    <span class="item-label">① 信访处理情况说明及佐证材料</span>
+                                    <div class="item-sub">本项目不涉及信访事项 · 无需上传</div>
+                                </div>
+                            </div>
+                            <span class="badge-optional">不涉及</span>
+                        </div>
+                        <div class="upload-hint">📤 本项目无信访事项，无需上传信访处理材料</div>
+                        <input type="file" accept=".pdf" disabled>
+                    </div>
+
+                    <!-- ② 违法查处案卷（本项目无违法用地，不涉及） -->
+                    <div class="upload-item disabled-item" id="uploadItem-caseFile">
+                        <div class="item-header">
+                            <div class="item-title-area">
+                                <span class="item-icon">📄</span>
+                                <div>
+                                    <span class="item-label">② 违法用地查处案卷扫描件</span>
+                                    <div class="item-sub">本项目未动工无违法 · 无需上传</div>
+                                </div>
+                            </div>
+                            <span class="badge-optional">不涉及</span>
+                        </div>
+                        <div class="upload-hint">📤 本项目无违法用地，无需上传查处案卷</div>
+                        <input type="file" accept=".pdf" disabled>
+                    </div>
+
+                    <!-- ③ 查处到位意见书（不涉及） -->
+                    <div class="upload-item disabled-item" id="uploadItem-clearance">
+                        <div class="item-header">
+                            <div class="item-title-area">
+                                <span class="item-icon">📄</span>
+                                <div>
+                                    <span class="item-label">③ 查处到位意见书</span>
+                                    <div class="item-sub">不涉及 · 无需上传</div>
+                                </div>
+                            </div>
+                            <span class="badge-optional">不涉及</span>
+                        </div>
+                        <div class="upload-hint">📤 本项目无违法用地，无需此文件</div>
+                        <input type="file" accept=".pdf" disabled>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-panel">
+            <div class="card">
+                <div class="card-header">
+                    <span class="icon-circle icon-preview">🔍</span>
+                    填报数据预览与核对
+                    <span style="font-weight:400;font-size:11px;color:var(--gray-500);margin-left:auto;">请选择违法情形并填写详情</span>
+                </div>
+                <div class="card-body">
+                    <!-- 信访处理情况 -->
+                    <div class="preview-section">
+                        <h4><span class="dot dot-green"></span> 信访处理情况</h4>
+                        <table class="data-table">
+                            <thead><tr><th>字段名称</th><th>内容</th><th>数据来源</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td>是否有信访事项</td>
+                                    <td><span class="val-badge val-pass">否</span></td>
+                                    <td><span class="field-source">用户选择</span></td>
+                                    <td><button class="modify-btn">修改</button></td>
+                                </tr>
+                                <tr>
+                                    <td>审查报告文本</td>
+                                    <td colspan="2" style="font-size:12px;color:var(--gray-700);">经我局核查，该用地<strong>不涉及</strong>土地征收信访事项。</td>
+                                    <td>-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 违法用地情形选择 -->
+                    <div class="preview-section">
+                        <h4><span class="dot dot-orange"></span> 违法用地情形选择（请选择一项）</h4>
+                        <div class="case-selector" id="caseSelector">
+                            <div class="case-card selected" data-case="1" onclick="selectCase(1)">
+                                <span class="case-num">情形一</span>
+                                <span class="case-desc">项目未动工<br>不存在违法用地</span>
+                            </div>
+                            <div class="case-card" data-case="2" onclick="selectCase(2)">
+                                <span class="case-num">情形二</span>
+                                <span class="case-desc">未动工<br>有经批准临时用地</span>
+                            </div>
+                            <div class="case-card" data-case="3" onclick="selectCase(3)">
+                                <span class="case-num">情形三</span>
+                                <span class="case-desc">未动工<br>非本项目主体违法<br>(2020年前)</span>
+                            </div>
+                            <div class="case-card" data-case="4" onclick="selectCase(4)">
+                                <span class="case-num">情形四</span>
+                                <span class="case-desc">未动工<br>非本项目主体违法<br>(2021年后)</span>
+                            </div>
+                            <div class="case-card" data-case="5" onclick="selectCase(5)">
+                                <span class="case-num">情形五</span>
+                                <span class="case-desc">已动工有违法<br>不涉及保护地</span>
+                            </div>
+                            <div class="case-card" data-case="6" onclick="selectCase(6)">
+                                <span class="case-num">情形六</span>
+                                <span class="case-desc">已动工有违法<br>涉及保护地</span>
+                            </div>
+                        </div>
+                        <p style="font-size:11px;color:var(--gray-500);">当前选择：<strong>情形一 — 项目未动工，不存在违法用地问题</strong></p>
+                    </div>
+
+                    <!-- 违法详情（情形一展示最简） -->
+                    <div class="preview-section" id="caseDetailSection">
+                        <h4><span class="dot dot-green"></span> 违法用地详情（情形一：未动工无违法）</h4>
+                        <table class="data-table">
+                            <thead><tr><th>字段名称</th><th>内容</th><th>数据来源</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td>动工情况</td>
+                                    <td>项目未动工</td>
+                                    <td><span class="field-source">📎 第三步</span></td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>违法用地结论</td>
+                                    <td><span class="val-badge val-pass">不存在违法用地问题</span></td>
+                                    <td><span class="field-source">系统判断</span></td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>审查报告文本</td>
+                                    <td colspan="2" style="font-size:12px;color:var(--gray-700);">经我局核查，项目<strong>未动工</strong>，<strong>不存在违法用地问题</strong>。</td>
+                                    <td>-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 审查报告完整预览 -->
+                    <div class="preview-section">
+                        <h4><span class="dot dot-blue"></span> 审查报告文本预览（八、信访与违法用地处理情况）</h4>
+                        <div style="background:var(--gray-50);padding:16px;border-radius:8px;font-size:13px;color:var(--gray-700);line-height:1.8;">
+                            <p><strong>【信访处理】</strong>经我局核查，该用地<strong>不涉及</strong>土地征收信访事项。</p>
+                            <p style="margin-top:10px;"><strong>【违法用地情况】</strong>经我局核查，项目<strong>未动工</strong>，<strong>不存在违法用地问题</strong>。</p>
+                        </div>
+                    </div>
+
+                    <!-- 系统校验结果 -->
+                    <div class="preview-section" style="border-bottom:none;">
+                        <h4><span class="dot dot-orange"></span> 系统实时校验结果</h4>
+                        <table class="data-table">
+                            <thead><tr><th>校验项</th><th>结果</th><th>说明</th></tr></thead>
+                            <tbody>
+                                <tr><td>违法情形选择 (R2)</td><td><span class="val-badge val-pass">✅ 已选择</span></td><td>已选择情形一：项目未动工，不存在违法用地问题</td></tr>
+                                <tr><td>信访事项完整性 (R1)</td><td><span class="val-badge val-info">ℹ️ 不涉及</span></td><td>本项目无信访事项</td></tr>
+                                <tr><td>查处到位 (R4)</td><td><span class="val-badge val-info">ℹ️ 不涉及</span></td><td>无违法用地，无需查处</td></tr>
+                                <tr><td>处罚合规性 (R5/R7)</td><td><span class="val-badge val-info">ℹ️ 不涉及</span></td><td>无违法用地，无处罚</td></tr>
+                                <tr><td>保护地意见 (R6)</td><td><span class="val-badge val-info">ℹ️ 不涉及</span></td><td>无违法用地，不涉及保护地</td></tr>
+                                <tr><td>非立案处置合法性 (R9)</td><td><span class="val-badge val-info">ℹ️ 不涉及</span></td><td>无违法用地，无需论证</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="action-bar">
+                        <button class="btn btn-secondary" onclick="saveStepData(8)">💾 保存草稿</button>
+                        <button class="btn btn-info" onclick="previewReport()">👁️ 预览审查报告</button>
+                        <button class="btn btn-success" id="btnComplete" onclick="saveAndGenerate()">🎉 完成并生成报告</button>
+                    </div>
+                    <p style="font-size:11px; color:var(--gray-400); margin-top:8px; text-align:right;">
+                        💡 这是最后一步！确认所有信息无误后，点击“完成并生成报告”即可下载完整的审查报告
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        var currentCase = '1';
+        const caseNames = ['', '情形一：未动工，不存在违法用地', '情形二：未动工，有经批准临时用地', '情形三：未动工，非本项目主体违法(2020年前)', '情形四：未动工，非本项目主体违法(2021年后)', '情形五：已动工有违法，不涉及保护地', '情形六：已动工有违法，涉及保护地'];
+
+        // 根据兴宁区项目真实数据自动匹配情形
+        function autoMatchStep8Cases() {
+            // 从localStorage获取现有数据（如果有）
+            var savedData = JSON.parse(localStorage.getItem('step8Data') || '{}');
+            
+            // 如果已有selectedCase数据，直接使用
+            if (savedData.selectedCase) {
+                currentCase = savedData.selectedCase;
+            } else {
+                // 根据兴宁区项目数据：项目未动工，不存在违法用地问题
+                currentCase = '1';
+            }
+            
+            // 更新UI显示
+            updateStep8CaseUI();
+        }
+
+        // 更新第8步情形UI显示
+        function updateStep8CaseUI() {
+            document.querySelectorAll('.case-card').forEach(card => card.classList.remove('selected'));
+            var selectedCard = document.querySelector(`.case-card[data-case="${currentCase}"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            }
+            document.querySelector('#caseDetailSection h4').textContent = '违法用地详情（' + caseNames[currentCase] + '）';
+        }
+
+        function selectCase(caseNum) {
+            currentCase = String(caseNum);
+            document.querySelectorAll('.case-card').forEach(card => card.classList.remove('selected'));
+            var selectedCard = document.querySelector(`.case-card[data-case="${caseNum}"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            }
+            document.querySelector('#caseDetailSection h4').textContent = '违法用地详情（' + caseNames[caseNum] + '）';
+            console.log('✅ 违法情形已切换至：' + caseNames[caseNum]);
+            saveStepData(8);
+        }
+
+        // 保存当前步骤数据到JSON（localStorage）
+        function saveStepData(step) {
+            var data = {};
+            var inputs = document.querySelectorAll('input[type="text"], textarea, select');
+            inputs.forEach(function(input) {
+                if (input.id || input.name) {
+                    data[input.id || input.name] = input.value;
+                }
+            });
+            var caseCards = document.querySelectorAll('.case-card.selected');
+            if (caseCards.length > 0) {
+                data.selectedCase = caseCards[0].getAttribute('data-case');
+            }
+            localStorage.setItem('step' + step + 'Data', JSON.stringify(data));
+            console.log('✅ 第' + step + '步数据已保存:', JSON.stringify(data));
+            return data;
+        }
+
+        // 预览审查报告
+        function previewReport() {
+            localStorage.setItem('fromPage', '第8步页面设计.html');
+            window.location.href = '兴宁五塘风电场一期_审查报告.md';
+        }
+
+        StepApp.init(8);
+
+        // 完成并生成报告
+        function saveAndGenerate() {
+            saveStepData(8);
+            alert('🎉 正在生成完整审查报告…\n\n✅ 八个步骤数据已汇总保存到JSON\n✅ 审查报告已准备就绪\n✅ 请直接打开Markdown文件查看');
+            window.location.href = '兴宁五塘风电场一期_审查报告.md';
+        }
+
+        console.log('✅ 第八步界面已加载：信访与违法用地处理 - 兴宁五塘风电场一期');
+        console.log('📋 当前选择：情形一 - 项目未动工，不存在违法用地问题');
+        console.log('📋 信访情况：不涉及土地征收信访事项');
+        
+        // 页面加载时自动匹配情形
+        document.addEventListener('DOMContentLoaded', function() {
+            autoMatchStep8Cases();
+        });
+    </script>
+</body>
+</html>
