@@ -14,6 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -80,29 +81,33 @@ public class DocumentAnalysisService {
         if (name.contains("信访") || sample.contains("信访")) return "信访处理说明";
         if (name.contains("可研") && name.contains("变更")) return "可行性研究报告变更批复";
         if ((name.contains("初设") || name.contains("初步设计")) && name.contains("变更")) return "初步设计变更批复";
+        if (name.contains("初设") || name.contains("初步设计")) return "初步设计批复";
+        if (name.contains("核准") || name.contains("备案") || name.contains("立项")) return "项目立项/核准批复";
         if (name.contains("预审") || sample.contains("用地预审")) return "建设用地预审批复";
         if (name.contains("核准") || name.contains("备案") || sample.contains("项目核准")) return "项目立项/核准批复";
         if (name.contains("初设") || name.contains("初步设计") || sample.contains("初步设计")) return "初步设计批复";
         if (name.contains("勘测") || sample.contains("勘测定界")) return "勘测定界材料";
+        if (name.contains("土地分类") || name.contains("分类面积") || sample.contains("土地分类") || sample.contains("地类面积")) return "土地分类权属面积汇总表";
         if (name.contains("权属") || sample.contains("权属")) return "权属证明材料";
         if (name.contains("年度国土变更") || name.contains("国土变更调查") || sample.contains("国土变更调查") || sample.contains("套合情况")) return "年度国土变更调查套合情况分析";
         if (name.contains("规划") || sample.contains("国土空间规划")) return "规划佐证材料";
-        if (name.contains("计划") || sample.contains("计划指标")) return "计划指标文件";
+        if (name.contains("计划") || name.contains("核销指标") || sample.contains("计划指标") || sample.contains("核销指标")) return "计划指标文件";
         if (name.contains("林地") || sample.contains("使用林地")) return "林地批复";
-        if (name.contains("生态") || sample.contains("生态保护红线") || sample.contains("自然保护区")) return "生态保护地意见";
+        if (name.contains("生态") || name.contains("自然保护区") || name.contains("保护区") || sample.contains("生态保护红线") || sample.contains("自然保护区")) return "生态保护地意见";
         if (name.contains("补充耕地") || sample.contains("补充耕地")) return "补充耕地方案";
         if (name.contains("占补") || sample.contains("占补平衡")) return "占补平衡挂钩信息单";
         if (name.contains("预公告") || sample.contains("征收土地预公告")) return "征收土地预公告";
         if (name.contains("土地现状调查") || name.contains("现状调查材料") || sample.contains("土地现状调查")) return "土地现状调查材料";
-        if (name.contains("社稳") || name.contains("稳评") || sample.contains("社稳") || sample.contains("社会稳定风险")) return "社会稳定风险评估报告";
+        if (name.contains("社稳") || name.contains("稳评") || name.contains("社会稳定") || name.contains("风险评估") || sample.contains("社稳") || sample.contains("社会稳定风险")) return "社会稳定风险评估报告";
         if (name.contains("听证") || sample.contains("听证")) return "听证材料";
         if (name.contains("补偿安置公告") || sample.contains("补偿安置公告")) return "征地补偿安置公告及照片";
         if (name.contains("协议") || sample.contains("补偿安置协议")) return "征地补偿安置协议";
         if (name.contains("社保") || sample.contains("社会保障")) return "社保审核意见";
+        if (name.contains("有偿使用费") || name.contains("土地有偿") || sample.contains("土地有偿使用费") || sample.contains("新增建设用地有偿使用费")) return "土地有偿使用费材料";
         if (name.contains("节约集约") || sample.contains("节约集约")) return "节约集约用地论证分析专章";
         if (name.contains("行业主管") || sample.contains("行业主管部门")) return "行业主管部门意见";
         if (name.contains("地灾评估") || name.contains("地质灾害") || sample.contains("地灾评估") || sample.contains("地质灾害评估")) return "地灾评估报告批复";
-        if (name.contains("压覆矿查询") || name.contains("压覆矿") || sample.contains("压覆矿查询")) return "压覆矿查询表";
+        if (name.contains("压覆矿查询") || name.contains("压覆矿") || name.contains("压矿") || sample.contains("压覆矿查询") || sample.contains("压矿查询")) return "压覆矿查询表";
         if (sample.contains("补偿安置") || sample.contains("土地征收")) return "土地征收材料";
         if (sample.contains("地质灾害") || sample.contains("压覆")) return "地灾压矿材料";
         return "待识别材料";
@@ -114,12 +119,12 @@ public class DocumentAnalysisService {
         if (documentType.contains("可行性研究") || name.contains("可研")) return "step1";
         if (documentType.contains("国土变更调查")) return "step2";
         if (documentType.contains("土地现状调查") || documentType.contains("征地补偿安置公告") || documentType.contains("社会稳定") || documentType.contains("听证")) return "step5";
-        if (documentType.contains("勘测") || documentType.contains("权属") || name.contains("现状") || name.contains("权属")) return "step2";
+        if (documentType.contains("勘测") || documentType.contains("权属") || documentType.contains("土地分类") || name.contains("现状") || name.contains("权属")) return "step2";
         if (documentType.contains("规划") || documentType.contains("计划指标") || documentType.contains("林地") || documentType.contains("生态")) return "step3";
         if (documentType.contains("补充耕地") || documentType.contains("占补")) return "step4";
         if (documentType.contains("征收")) return "step5";
         if (documentType.contains("社保") || documentType.contains("协议") || documentType.contains("稳评")) return "step5";
-        if (documentType.contains("节约集约") || documentType.contains("行业主管") || text.contains("供地")) return "step6";
+        if (documentType.contains("节约集约") || documentType.contains("行业主管") || documentType.contains("有偿使用费") || text.contains("供地")) return "step6";
         if (documentType.contains("地灾") || documentType.contains("压矿") || documentType.contains("压覆")) return "step7";
         if (documentType.contains("违法")) return "step8";
         if (documentType.contains("信访") || text.contains("信访")) return "step8";
@@ -153,6 +158,13 @@ public class DocumentAnalysisService {
         if (text.contains("不涉及占用耕地") || text.contains("耕地0公顷")) {
             fields.add(new ExtractedField("占用耕地", "0公顷", "关键词判断", 0.78, null));
         }
+        if (text.contains("旱地") || text.contains("水田") || text.contains("永久基本农田")) {
+            fields.add(new ExtractedField("耕地细分", collectPresent(text, List.of("旱地", "水田", "永久基本农田")), "关键词判断", 0.76, null));
+        }
+        if (text.contains("乔木林地") || text.contains("灌木林地") || text.contains("其他林地") || text.contains("园地")) {
+            fields.add(new ExtractedField("农用地分类构成", collectPresent(text, List.of("乔木林地", "灌木林地", "其他林地", "园地")), "关键词判断", 0.76, null));
+        }
+        addFirstMatch(fields, "土地有偿使用费", text, List.of("土地有偿使用费[^0-9]{0,30}([0-9]+(?:\\.[0-9]+)?\\s*万元)", "有偿使用费[^0-9]{0,30}([0-9]+(?:\\.[0-9]+)?\\s*万元)"));
         if (text.contains("不压覆重要矿产")) {
             fields.add(new ExtractedField("压覆矿产", "不压覆重要矿产资源", "关键词判断", 0.84, null));
         }
@@ -167,6 +179,10 @@ public class DocumentAnalysisService {
                 return;
             }
         }
+    }
+
+    private String collectPresent(String text, List<String> keywords) {
+        return keywords.stream().filter(text::contains).collect(Collectors.joining("、"));
     }
 
     private void addArea(List<ExtractedField> fields, String label, String text, String keyword) {
@@ -219,6 +235,12 @@ public class DocumentAnalysisService {
                 checks.add(new PolicyCheck("pass", "年度国土变更调查套合情况", "已识别年度国土变更调查套合情况分析材料或相关结论。", "1009号模板"));
             } else {
                 checks.add(new PolicyCheck("warn", "年度国土变更调查套合情况", "第二步需补充年度国土变更调查套合情况分析材料。", "1009号模板"));
+            }
+            if (text.contains("旱地") || text.contains("水田") || text.contains("永久基本农田")) {
+                checks.add(new PolicyCheck("pass", "耕地细分核对", "已识别旱地、水田或永久基本农田等年度变更调查细分信息。", "年度国土变更调查"));
+            }
+            if (text.contains("乔木林地") || text.contains("灌木林地") || text.contains("其他林地") || text.contains("园地")) {
+                checks.add(new PolicyCheck("pass", "农用地分类构成", "已识别乔木林地、灌木林地、其他林地或园地等农用地分类构成。", "年度国土变更调查"));
             }
         }
 

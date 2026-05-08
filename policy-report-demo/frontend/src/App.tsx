@@ -53,7 +53,7 @@ type MaterialSpec = {
   required: boolean;
   sub: string;
   keywords: string[];
-  condition?: 'cultivatedLand' | 'petition';
+  condition?: 'cultivatedLand' | 'forest' | 'petition';
 };
 
 type CaseOption = {
@@ -77,7 +77,7 @@ const MATERIAL_SPECS: Record<string, MaterialSpec[]> = {
   step1: [
     spec('pre', '建设用地预审批复', true, '法定前置条件', ['预审', '用地预审', '预审批复']),
     spec('approval', '项目立项批复文件', true, '核准/备案/立项', ['核准', '立项', '备案', '项目批复']),
-    spec('design', '初步设计批复文件', true, '建设规模和标准', ['初步设计', '初设']),
+    spec('design', '初步设计批复文件', false, '建设规模和标准，选传', ['初步设计', '初设']),
     spec('approvalChange', '可行性研究报告变更批复', false, '有变更时上传', ['可研', '可行性研究', '变更批复']),
     spec('designChange', '初步设计变更批复', false, '有初设变更时上传', ['初设变更', '初步设计变更'])
   ],
@@ -92,7 +92,7 @@ const MATERIAL_SPECS: Record<string, MaterialSpec[]> = {
   step3: [
     spec('plan', '规划佐证材料', true, '国土空间规划符合性', ['规划', '三区三线', '用途管制']),
     spec('quota', '年度计划指标文件', true, '计划指标来源', ['计划指标', '指标配置']),
-    spec('forest', '林地批复', true, '本项目涉及林地', ['林地', '林草']),
+    spec('forest', '林地批复', true, '涉及林地时条件必传', ['林地', '林草'], 'forest'),
     spec('eco', '生态/保护地意见', false, '涉及红线或保护区时上传', ['生态保护红线', '自然保护区', '保护地'])
   ],
   step4: [
@@ -114,13 +114,13 @@ const MATERIAL_SPECS: Record<string, MaterialSpec[]> = {
   ],
   step7: [
     spec('geo', '地灾评估报告批复', true, '地灾易发区核验', ['地质灾害', '地灾评估', '地灾批复']),
-    spec('mine', '压覆矿查询表', true, '压覆矿产结论', ['压覆矿查询', '压覆矿', '压覆', '矿产', '压矿']),
+    spec('mine', '压覆矿查询表', false, '压覆矿产结论，选传', ['压覆矿查询', '压覆矿', '压覆', '矿产', '压矿']),
     spec('mineApproval', '压覆审批/补偿材料', false, '涉及压覆时上传', ['压覆审批', '补偿协议'])
   ],
   step8: [
-    spec('petition', '信访处理说明', true, '有信访事项时必传，无信访无需上传', ['信访', '来信', '上访'], 'petition'),
-    spec('illegal', '违法用地查处案卷', true, '违法用地闭合', ['违法用地', '行政处罚', '查处']),
-    spec('rectification', '查处到位意见书', true, '处罚执行到位', ['查处到位', '整改到位', '罚款到账'])
+    spec('petition', '信访处理说明', false, '有信访事项时条件选传', ['信访', '来信', '上访']),
+    spec('illegal', '违法用地查处案卷', false, '存在违法用地时条件选传', ['违法用地', '行政处罚', '查处']),
+    spec('rectification', '查处到位意见书', false, '需证明处罚执行到位时条件选传', ['查处到位', '整改到位', '罚款到账'])
   ]
 };
 
@@ -131,7 +131,7 @@ const CASE_GROUPS: Record<string, CaseGroup[]> = {
     group('projectPhase', '分期/分段报批情形选择', ['分段报批 多城市', '分期报批 已确定期数']),
     group('landUseType', '单独选址情形选择', ['完全在规划范围外', '部分在规划范围内', '符合规划范围']),
     group('forestryApproval', '林地审批情形选择', ['涉及林地 已审批', '不涉及林地']),
-    group('constructionStatus', '动工用地情形选择', ['项目未动工', '已动工 不超先行用地', '已动工 存在违法用地']),
+    group('constructionStatus', '动工用地情形选择', ['未动工，不存在违法用地问题', '未动工，但项目范围内存在经批准的临时用地', '已动工，未超出经批准的先行用地范围', '项目主体未动工，但存在非本项目主体的违法用地行为', '已动工，超出经批准的先行用地范围', '已动工，存在违法用地问题']),
     group('reductionStatus', '核减用地情形选择', ['未核减用地', '已核减用地'])
   ],
   step2: [
@@ -401,9 +401,10 @@ function App() {
           <section className="card material-ledger">
             <div className="card-header"><FolderOpen size={17} />本步骤材料清单</div>
             <div className="card-body">
-              <MaterialGroup title="必传文件" specs={activeMaterials.filter((item) => isMaterialRequired(item, activeWorkspace))} analyses={activeAnalyses} workspaceStep={activeWorkspace} onWithdraw={withdrawUploadedFile} />
+              <MaterialGroup title="必传文件" specs={activeMaterials.filter((item) => !item.condition && isMaterialRequired(item, activeWorkspace))} analyses={activeAnalyses} workspaceStep={activeWorkspace} onWithdraw={withdrawUploadedFile} />
+              <MaterialGroup title="条件必传文件" specs={activeMaterials.filter((item) => item.condition && isMaterialRequired(item, activeWorkspace))} analyses={activeAnalyses} workspaceStep={activeWorkspace} onWithdraw={withdrawUploadedFile} />
               <MaterialGroup title="条件必传（当前无需上传）" specs={activeMaterials.filter((item) => isMaterialSkipped(item, activeWorkspace))} analyses={activeAnalyses} workspaceStep={activeWorkspace} onWithdraw={withdrawUploadedFile} />
-              <MaterialGroup title="选传文件" specs={activeMaterials.filter((item) => !isMaterialRequired(item, activeWorkspace) && !isMaterialSkipped(item, activeWorkspace))} analyses={activeAnalyses} workspaceStep={activeWorkspace} onWithdraw={withdrawUploadedFile} />
+              <MaterialGroup title="选传/条件选传文件" specs={activeMaterials.filter((item) => !isMaterialRequired(item, activeWorkspace) && !isMaterialSkipped(item, activeWorkspace))} analyses={activeAnalyses} workspaceStep={activeWorkspace} onWithdraw={withdrawUploadedFile} />
             </div>
           </section>
         </aside>
@@ -640,6 +641,7 @@ function isMaterialRequired(material: MaterialSpec, step?: StepWorkspace) {
 function isMaterialSkipped(material: MaterialSpec, step?: StepWorkspace) {
   if (!material.condition || !step) return false;
   if (material.condition === 'cultivatedLand') return !hasPositiveCondition(step, ['占用耕地', '耕地'], 'caseSupplement');
+  if (material.condition === 'forest') return !hasPositiveCondition(step, ['林地'], 'forestryApproval');
   if (material.condition === 'petition') return !hasPositiveCondition(step, ['信访事项', '信访'], 'petitionType');
   return false;
 }

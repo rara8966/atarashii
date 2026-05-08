@@ -101,9 +101,6 @@ public class WorkspaceStateService {
         List<DocumentAnalysisResponse> analyses = new ArrayList<>();
         analyses.add(analysis);
         analyses.addAll(step.analyses());
-        if (analyses.size() > 6) {
-            analyses = analyses.subList(0, 6);
-        }
         replaceStep(stepId, new StepWorkspace(stepId, new ArrayList<>(fieldMap.values()), new ArrayList<>(checklistMap.values()), analyses, step.policyCardFileName(), step.situations()));
         save();
         return state;
@@ -199,8 +196,11 @@ public class WorkspaceStateService {
                     field(stepId, "farmArea", "农用地", "0.3800公顷", "真实报告样例", "pass", true),
                     field(stepId, "collectiveArea", "集体土地", "0.0236公顷", "真实报告样例", "pass", true),
                     field(stepId, "stateArea", "国有土地", "0.3564公顷", "真实报告样例", "pass", true),
-                    field(stepId, "landChangeOverlay", "年度国土变更调查套合情况", "需结合年度国土变更调查套合情况分析材料核对", "真实报告样例", "warn", true));
+                        field(stepId, "landChangeOverlay", "年度国土变更调查套合情况", "需结合年度国土变更调查套合情况分析材料核对", "真实报告样例", "warn", true),
+                        field(stepId, "cultivatedLandDetail", "耕地细分", "需核对旱地、水田、永久基本农田等构成", "真实报告样例", "warn", true),
+                        field(stepId, "agriculturalComposition", "农用地分类构成", "需核对乔木林地、灌木林地、其他林地、园地等构成", "真实报告样例", "warn", true));
             case "step3" -> List.of(
+                        field(stepId, "forestApproval", "林地手续", "涉及林地，已办理使用林地批复", "真实报告样例", "pass", true),
                     field(stepId, "ecology", "生态保护红线", "不涉及", "真实报告样例", "pass", true),
                     field(stepId, "permanentFarm", "永久基本农田", "0公顷", "真实报告样例", "pass", true),
                     field(stepId, "planQuota", "计划指标", "由自治区核销", "真实报告样例", "warn", true));
@@ -236,7 +236,7 @@ public class WorkspaceStateService {
             case "step5" -> List.of(check("public", "公共利益依据已出现", "pass", "可支撑征收章节。"), check("announcement", "补偿安置公告及照片需核对", "warn", "需上传征地补偿安置公告及照片。"), check("hearing", "听证材料需核对", "warn", "需上传听证告知、听证笔录或放弃听证等材料。"), check("social", "社保凭证需核对", "warn", "建议补齐社保审核意见或到账凭证。"));
             case "step6" -> List.of(check("supply", "供地方式已识别", "pass", "拟以出让方式供地。"), check("fee", "土地有偿使用费已识别", "pass", "需核对金额和缴库口径。"), check("standard", "用地标准需人工确认", "warn", "风机、箱变、道路等功能分区需核指标。"));
             case "step7" -> List.of(check("geo", "地灾评估已闭合", "pass", "一级评估并通过专家审查。"), check("mine", "不压覆重要矿产", "pass", "有明确查询结论。"));
-            case "step8" -> List.of(check("petition", "无信访事项无需信访材料", "pass", "报告写明不存在信访，信访材料不作为本项目必传。"), check("illegal", "违法用地已处罚整改", "pass", "0.0588公顷已执行到位。"), check("protect", "保护地风险不涉及", "pass", "不涉及生态红线或自然保护区。"));
+            case "step8" -> List.of(check("conditional", "第八步材料均为条件选传", "pass", "信访、违法用地、查处整改等材料均按实际情形上传，不作为固定必传。"), check("petition", "无信访事项无需信访材料", "pass", "报告写明不存在信访，信访材料不作为本项目必传。"), check("illegal", "违法用地材料涉及时上传", "pass", "存在违法用地时上传查处案卷或到位意见。"), check("protect", "保护地风险不涉及", "pass", "不涉及生态红线或自然保护区。"));
             default -> List.of();
         };
     }
@@ -271,7 +271,7 @@ public class WorkspaceStateService {
                 situations.put("projectPhase", "2");
                 situations.put("landUseType", "3");
                 situations.put("forestryApproval", "1");
-                situations.put("constructionStatus", "3");
+                situations.put("constructionStatus", "6");
                 situations.put("reductionStatus", "1");
             }
             case "step2" -> {
