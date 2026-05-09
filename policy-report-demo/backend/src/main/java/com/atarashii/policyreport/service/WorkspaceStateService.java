@@ -8,6 +8,8 @@ import com.atarashii.policyreport.model.DemoModels.StepSummary;
 import com.atarashii.policyreport.model.DemoModels.StepWorkspace;
 import com.atarashii.policyreport.model.DemoModels.SituationUpdateRequest;
 import com.atarashii.policyreport.model.DemoModels.WorkspaceState;
+import com.atarashii.policyreport.persistence.ProjectRecordEntity;
+import com.atarashii.policyreport.persistence.ProjectRecordRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
@@ -21,38 +23,54 @@ import java.util.stream.Collectors;
 
 @Service
 public class WorkspaceStateService {
-    private final Path stateFile = Path.of("data", "workspace-state.json");
+    private static final String DEFAULT_PROJECT_KEY = "_default";
+
     private final ObjectMapper objectMapper;
     private final DemoProjectService demoProjectService;
-    private WorkspaceState state;
+    private final ProjectRecordRepository projectRecordRepository;
+    private final Map<String, WorkspaceState> states = new LinkedHashMap<>();
 
-    public WorkspaceStateService(ObjectMapper objectMapper, DemoProjectService demoProjectService) {
+    public WorkspaceStateService(ObjectMapper objectMapper, DemoProjectService demoProjectService, ProjectRecordRepository projectRecordRepository) {
         this.objectMapper = objectMapper;
         this.demoProjectService = demoProjectService;
+        this.projectRecordRepository = projectRecordRepository;
     }
 
     public synchronized WorkspaceState getState() {
-        if (state != null) {
-            return state;
+        return getState(null);
+    }
+
+    public synchronized WorkspaceState getState(String projectId) {
+        String key = stateKey(projectId);
+        if (states.containsKey(key)) {
+            return states.get(key);
         }
+        Path stateFile = stateFile(projectId);
         if (Files.isRegularFile(stateFile)) {
             try {
-                state = objectMapper.readValue(stateFile.toFile(), WorkspaceState.class);
-                state = normalizeState(state);
-                return state;
+                WorkspaceState loaded = objectMapper.readValue(stateFile.toFile(), WorkspaceState.class);
+                loaded = normalizeState(loaded);
+                states.put(key, loaded);
+                return loaded;
             } catch (Exception ignored) {
-                state = initialState();
-                save();
-                return state;
+                WorkspaceState next = initialState(projectId);
+                states.put(key, next);
+                save(projectId);
+                return next;
             }
         }
-        state = initialState();
-        save();
-        return state;
+        WorkspaceState next = initialState(projectId);
+        states.put(key, next);
+        save(projectId);
+        return next;
     }
 
     public synchronized WorkspaceState updateField(FieldUpdateRequest request) {
-        WorkspaceState current = getState();
+        return updateField(null, request);
+    }
+
+    public synchronized WorkspaceState updateField(String projectId, FieldUpdateRequest request) {
+        WorkspaceState current = getState(projectId);
         StepWorkspace step = current.steps().get(request.stepId());
         if (step == null) {
             return current;
@@ -70,26 +88,34 @@ public class WorkspaceStateService {
         if (!updated) {
             fields.add(new EditableField(request.stepId(), request.key(), request.key(), request.value(), "人工新增", safeStatus(request.status(), "warn"), false, null));
         }
-        replaceStep(step.stepId(), new StepWorkspace(step.stepId(), fields, step.checklist(), step.analyses(), step.policyCardFileName(), step.situations()));
-        save();
-        return state;
+        replaceStep(projectId, step.stepId(), new StepWorkspace(step.stepId(), fields, step.checklist(), step.analyses(), step.policyCardFileName(), step.situations()));
+        save(projectId);
+        return getState(projectId);
     }
 
     public synchronized WorkspaceState updateSituation(SituationUpdateRequest request) {
-        WorkspaceState current = getState();
+        return updateSituation(null, request);
+    }
+
+    public synchronized WorkspaceState updateSituation(String projectId, SituationUpdateRequest request) {
+        WorkspaceState current = getState(projectId);
         StepWorkspace step = current.steps().get(request.stepId());
         if (step == null) {
             return current;
         }
         Map<String, String> situations = new LinkedHashMap<>(safeSituations(step.stepId(), step.situations()));
         situations.put(request.groupId(), request.value());
-        replaceStep(step.stepId(), new StepWorkspace(step.stepId(), step.fields(), step.checklist(), step.analyses(), step.policyCardFileName(), situations));
-        save();
-        return state;
+        replaceStep(projectId, step.stepId(), new StepWorkspace(step.stepId(), step.fields(), step.checklist(), step.analyses(), step.policyCardFileName(), situations));
+        save(projectId);
+        return getState(projectId);
     }
 
     public synchronized WorkspaceState mergeAnalysis(DocumentAnalysisResponse analysis) {
-        WorkspaceState current = getState();
+        return mergeAnalysis(null, analysis);
+    }
+
+    public synchronized WorkspaceState mergeAnalysis(String projectId, DocumentAnalysisResponse analysis) {
+        WorkspaceState current = getState(projectId);
         String stepId = analysis.targetStep() == null || analysis.targetStep().isBlank() ? "step1" : analysis.targetStep();
         StepWorkspace step = current.steps().getOrDefault(stepId, emptyStep(stepId));
         Map<String, EditableField> fieldMap = step.fields().stream().collect(Collectors.toMap(EditableField::label, field -> field, (a, b) -> a, LinkedHashMap::new));
@@ -97,17 +123,62 @@ public class WorkspaceStateService {
 
         Map<String, StepChecklistItem> checklistMap = step.checklist().stream().collect(Collectors.toMap(StepChecklistItem::title, item -> item, (a, b) -> a, LinkedHashMap::new));
         analysis.policyChecks().forEach(check -> checklistMap.put(check.title(), new StepChecklistItem("ai-" + keyOf(check.title()), check.title(), mapLevel(check.level()), check.detail())));
+        applyDerivedReviewState(stepId, fieldMap, checklistMap);
 
         List<DocumentAnalysisResponse> analyses = new ArrayList<>();
         analyses.add(analysis);
         analyses.addAll(step.analyses());
-        replaceStep(stepId, new StepWorkspace(stepId, new ArrayList<>(fieldMap.values()), new ArrayList<>(checklistMap.values()), analyses, step.policyCardFileName(), step.situations()));
-        save();
-        return state;
+        if (analyses.size() > 6) {
+            analyses = analyses.subList(0, 6);
+        }
+        replaceStep(projectId, stepId, new StepWorkspace(stepId, new ArrayList<>(fieldMap.values()), new ArrayList<>(checklistMap.values()), analyses, step.policyCardFileName(), deriveSituations(stepId, step.situations(), fieldMap)));
+        save(projectId);
+        return getState(projectId);
+    }
+
+    private void applyDerivedReviewState(String stepId, Map<String, EditableField> fieldMap, Map<String, StepChecklistItem> checklistMap) {
+        if (!"step6".equals(stepId)) {
+            return;
+        }
+        String supply = fieldValue(fieldMap, "供地方式");
+        if (!supply.isBlank() && !supply.contains("待解析")) {
+            checklistMap.put("供地方式已识别", new StepChecklistItem("supply", "供地方式已识别", "pass", "已从上传材料识别供地方式：“" + supply + "”。"));
+        }
+        String fee = fieldValue(fieldMap, "新增建设用地土地有偿使用费");
+        if (!fee.isBlank() && !fee.contains("待解析")) {
+            checklistMap.put("土地有偿使用费已识别", new StepChecklistItem("fee", "土地有偿使用费已识别", "pass", "已从上传材料识别土地有偿使用费：“" + fee + "”。"));
+        }
+    }
+
+    private Map<String, String> deriveSituations(String stepId, Map<String, String> existing, Map<String, EditableField> fieldMap) {
+        Map<String, String> situations = new LinkedHashMap<>(existing);
+        if (!"step6".equals(stepId)) {
+            return situations;
+        }
+        String supply = fieldValue(fieldMap, "供地方式");
+        if (supply.contains("划拨")) situations.put("caseSupply", "1");
+        if (supply.contains("出让")) situations.put("caseSupply", "2");
+        if (supply.contains("租赁")) situations.put("caseSupply", "3");
+        String fee = fieldValue(fieldMap, "新增建设用地土地有偿使用费");
+        if (!fee.isBlank() && !fee.contains("待解析")) {
+            situations.put("supplyMethod", "1");
+        } else if (supply.contains("划拨")) {
+            situations.put("supplyMethod", "2");
+        }
+        return situations;
+    }
+
+    private String fieldValue(Map<String, EditableField> fieldMap, String label) {
+        EditableField field = fieldMap.get(label);
+        return field == null || field.value() == null ? "" : field.value();
     }
 
     public synchronized WorkspaceState removeAnalysis(String fileId) {
-        WorkspaceState current = getState();
+        return removeAnalysis(null, fileId);
+    }
+
+    public synchronized WorkspaceState removeAnalysis(String projectId, String fileId) {
+        WorkspaceState current = getState(projectId);
         if (fileId == null || fileId.isBlank()) {
             return current;
         }
@@ -122,16 +193,45 @@ public class WorkspaceStateService {
                     .toList();
             steps.put(step.stepId(), new StepWorkspace(step.stepId(), fields, rebuildChecklist(step.stepId(), analyses), analyses, step.policyCardFileName(), step.situations()));
         }
-        state = new WorkspaceState(current.projectName(), steps);
-        save();
-        return state;
+        states.put(stateKey(projectId), new WorkspaceState(current.projectName(), steps));
+        save(projectId);
+        return getState(projectId);
     }
 
     public synchronized WorkspaceState registerPolicyCard(String fileName) {
-        WorkspaceState current = getState();
-        current.steps().forEach((stepId, step) -> replaceStep(stepId, new StepWorkspace(step.stepId(), step.fields(), step.checklist(), step.analyses(), fileName, step.situations())));
-        save();
-        return state;
+        return registerPolicyCard(null, fileName);
+    }
+
+    public synchronized WorkspaceState registerPolicyCard(String projectId, String fileName) {
+        WorkspaceState current = getState(projectId);
+        current.steps().forEach((stepId, step) -> replaceStep(projectId, stepId, new StepWorkspace(step.stepId(), step.fields(), step.checklist(), step.analyses(), fileName, step.situations())));
+        save(projectId);
+        return getState(projectId);
+    }
+
+    public synchronized WorkspaceState mergeStandardReview(String projectId, List<EditableField> reviewFields, List<StepChecklistItem> reviewChecks, String summary, String summaryStatus) {
+        WorkspaceState current = getState(projectId);
+        StepWorkspace step = current.steps().getOrDefault("step6", emptyStep("step6"));
+
+        Map<String, EditableField> fieldMap = step.fields().stream()
+                .filter(field -> !field.key().startsWith("standardReview."))
+                .collect(Collectors.toMap(EditableField::key, field -> field, (a, b) -> a, LinkedHashMap::new));
+        fieldMap.put("standard", new EditableField("step6", "standard", "用地标准", summary, "标准库匹配", safeStatus(summaryStatus, "warn"), true, null));
+        for (EditableField field : reviewFields) {
+            fieldMap.put(field.key(), field);
+        }
+
+        Map<String, StepChecklistItem> checklistMap = step.checklist().stream()
+                .filter(item -> !item.title().startsWith("标准复核："))
+                .collect(Collectors.toMap(StepChecklistItem::title, item -> item, (a, b) -> a, LinkedHashMap::new));
+        checklistMap.put("用地标准需人工确认", new StepChecklistItem("standard", "用地标准需人工确认", safeStatus(summaryStatus, "warn"), summary));
+        for (StepChecklistItem check : reviewChecks) {
+            checklistMap.put(check.title(), check);
+        }
+
+        replaceStep(projectId, "step6", new StepWorkspace("step6", new ArrayList<>(fieldMap.values()), new ArrayList<>(checklistMap.values()), step.analyses(), step.policyCardFileName(), step.situations()));
+        save(projectId);
+        return getState(projectId);
     }
 
     private WorkspaceState initialState() {
@@ -141,6 +241,46 @@ public class WorkspaceStateService {
             steps.put(step.id(), new StepWorkspace(step.id(), initialFields(step.id()), initialChecklist(step.id()), new ArrayList<>(), "根目录明白卡", defaultSituations(step.id())));
         }
         return new WorkspaceState(project.projectName(), steps);
+    }
+
+    private WorkspaceState initialState(String projectId) {
+        if (projectId == null || projectId.isBlank()) {
+            return initialState();
+        }
+        return projectRecordRepository.findById(projectId)
+                .map(this::initialProjectState)
+                .orElseGet(this::initialState);
+    }
+
+    private WorkspaceState initialProjectState(ProjectRecordEntity projectRecord) {
+        Map<String, StepWorkspace> steps = new LinkedHashMap<>();
+        for (StepSummary step : demoProjectService.getDemoProject().steps()) {
+            steps.put(step.id(), new StepWorkspace(step.id(), projectFields(step.id(), projectRecord), projectChecklist(step.id()), new ArrayList<>(), "根目录明白卡", defaultSituations(step.id())));
+        }
+        return new WorkspaceState(projectRecord.getProjectName(), steps);
+    }
+
+    private List<EditableField> projectFields(String stepId, ProjectRecordEntity projectRecord) {
+        List<EditableField> fields = initialFields(stepId).stream()
+                .map(field -> new EditableField(field.stepId(), field.key(), field.label(), "待解析", "项目建档后待上传材料", "warn", field.required(), null))
+                .collect(Collectors.toCollection(ArrayList::new));
+        if ("step1".equals(stepId)) {
+            fields.removeIf(field -> field.key().equals("projectName"));
+            fields.add(0, new EditableField(stepId, "projectName", "项目名称", projectRecord.getProjectName(), "项目档案", "pass", true, null));
+            fields.add(new EditableField(stepId, "owner", "建设单位", safeProjectValue(projectRecord.getOwner()), "项目档案", projectRecord.getOwner() == null || projectRecord.getOwner().isBlank() ? "warn" : "pass", false, null));
+            fields.add(new EditableField(stepId, "location", "建设地点", safeProjectValue(projectRecord.getLocation()), "项目档案", projectRecord.getLocation() == null || projectRecord.getLocation().isBlank() ? "warn" : "pass", false, null));
+        }
+        return fields;
+    }
+
+    private List<StepChecklistItem> projectChecklist(String stepId) {
+        return initialChecklist(stepId).stream()
+                .map(item -> new StepChecklistItem(item.id(), item.title(), "todo", "待上传材料后自动校验。"))
+                .toList();
+    }
+
+    private String safeProjectValue(String value) {
+        return value == null || value.isBlank() ? "待补充" : value;
     }
 
     private WorkspaceState normalizeState(WorkspaceState loaded) {
@@ -196,11 +336,8 @@ public class WorkspaceStateService {
                     field(stepId, "farmArea", "农用地", "0.3800公顷", "真实报告样例", "pass", true),
                     field(stepId, "collectiveArea", "集体土地", "0.0236公顷", "真实报告样例", "pass", true),
                     field(stepId, "stateArea", "国有土地", "0.3564公顷", "真实报告样例", "pass", true),
-                        field(stepId, "landChangeOverlay", "年度国土变更调查套合情况", "需结合年度国土变更调查套合情况分析材料核对", "真实报告样例", "warn", true),
-                        field(stepId, "cultivatedLandDetail", "耕地细分", "需核对旱地、水田、永久基本农田等构成", "真实报告样例", "warn", true),
-                        field(stepId, "agriculturalComposition", "农用地分类构成", "需核对乔木林地、灌木林地、其他林地、园地等构成", "真实报告样例", "warn", true));
+                    field(stepId, "landChangeOverlay", "年度国土变更调查套合情况", "需结合年度国土变更调查套合情况分析材料核对", "真实报告样例", "warn", true));
             case "step3" -> List.of(
-                        field(stepId, "forestApproval", "林地手续", "涉及林地，已办理使用林地批复", "真实报告样例", "pass", true),
                     field(stepId, "ecology", "生态保护红线", "不涉及", "真实报告样例", "pass", true),
                     field(stepId, "permanentFarm", "永久基本农田", "0公顷", "真实报告样例", "pass", true),
                     field(stepId, "planQuota", "计划指标", "由自治区核销", "真实报告样例", "warn", true));
@@ -236,7 +373,7 @@ public class WorkspaceStateService {
             case "step5" -> List.of(check("public", "公共利益依据已出现", "pass", "可支撑征收章节。"), check("announcement", "补偿安置公告及照片需核对", "warn", "需上传征地补偿安置公告及照片。"), check("hearing", "听证材料需核对", "warn", "需上传听证告知、听证笔录或放弃听证等材料。"), check("social", "社保凭证需核对", "warn", "建议补齐社保审核意见或到账凭证。"));
             case "step6" -> List.of(check("supply", "供地方式已识别", "pass", "拟以出让方式供地。"), check("fee", "土地有偿使用费已识别", "pass", "需核对金额和缴库口径。"), check("standard", "用地标准需人工确认", "warn", "风机、箱变、道路等功能分区需核指标。"));
             case "step7" -> List.of(check("geo", "地灾评估已闭合", "pass", "一级评估并通过专家审查。"), check("mine", "不压覆重要矿产", "pass", "有明确查询结论。"));
-            case "step8" -> List.of(check("conditional", "第八步材料均为条件选传", "pass", "信访、违法用地、查处整改等材料均按实际情形上传，不作为固定必传。"), check("petition", "无信访事项无需信访材料", "pass", "报告写明不存在信访，信访材料不作为本项目必传。"), check("illegal", "违法用地材料涉及时上传", "pass", "存在违法用地时上传查处案卷或到位意见。"), check("protect", "保护地风险不涉及", "pass", "不涉及生态红线或自然保护区。"));
+            case "step8" -> List.of(check("petition", "无信访事项无需信访材料", "pass", "报告写明不存在信访，信访材料不作为本项目必传。"), check("illegal", "违法用地已处罚整改", "pass", "0.0588公顷已执行到位。"), check("protect", "保护地风险不涉及", "pass", "不涉及生态红线或自然保护区。"));
             default -> List.of();
         };
     }
@@ -271,7 +408,7 @@ public class WorkspaceStateService {
                 situations.put("projectPhase", "2");
                 situations.put("landUseType", "3");
                 situations.put("forestryApproval", "1");
-                situations.put("constructionStatus", "6");
+                situations.put("constructionStatus", "3");
                 situations.put("reductionStatus", "1");
             }
             case "step2" -> {
@@ -320,18 +457,35 @@ public class WorkspaceStateService {
         return situations;
     }
 
-    private void replaceStep(String stepId, StepWorkspace nextStep) {
-        Map<String, StepWorkspace> steps = new LinkedHashMap<>(getState().steps());
+    private void replaceStep(String projectId, String stepId, StepWorkspace nextStep) {
+        WorkspaceState current = getState(projectId);
+        Map<String, StepWorkspace> steps = new LinkedHashMap<>(current.steps());
         steps.put(stepId, nextStep);
-        state = new WorkspaceState(getState().projectName(), steps);
+        states.put(stateKey(projectId), new WorkspaceState(current.projectName(), steps));
     }
 
-    private void save() {
+    private void save(String projectId) {
         try {
+            Path stateFile = stateFile(projectId);
             Files.createDirectories(stateFile.getParent());
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(stateFile.toFile(), state);
+            objectMapper.writerWithDefaultPrettyPrinter().writeValue(stateFile.toFile(), getState(projectId));
         } catch (Exception ignored) {
         }
+    }
+
+    private Path stateFile(String projectId) {
+        String key = stateKey(projectId);
+        if (DEFAULT_PROJECT_KEY.equals(key)) {
+            return Path.of("data", "workspace-state.json");
+        }
+        return Path.of("data", "projects", key, "workspace-state.json");
+    }
+
+    private String stateKey(String projectId) {
+        if (projectId == null || projectId.isBlank()) {
+            return DEFAULT_PROJECT_KEY;
+        }
+        return projectId.replaceAll("[^0-9A-Za-z_-]", "_");
     }
 
     private String safeStatus(String status, String fallback) {

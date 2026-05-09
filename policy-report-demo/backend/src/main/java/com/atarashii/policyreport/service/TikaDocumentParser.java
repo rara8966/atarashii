@@ -33,7 +33,15 @@ public class TikaDocumentParser {
         }
     }
 
-    private ParsedDocument parse(InputStream inputStream, String fileName, String contentType) throws Exception {
+    public ParsedDocument parse(InputStream inputStream, String fileName, String contentType) {
+        try {
+            return parseInternal(inputStream, fileName, contentType);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Tika 解析文件失败: " + ex.getMessage(), ex);
+        }
+    }
+
+    private ParsedDocument parseInternal(InputStream inputStream, String fileName, String contentType) throws Exception {
         ContentHandler handler = new BodyContentHandler(-1);
         Metadata metadata = new Metadata();
         if (fileName != null) {

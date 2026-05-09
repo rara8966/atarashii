@@ -117,3 +117,61 @@ export type PolicyCardUploadResponse = {
   textLength: number;
   message: string;
 };
+
+export type ProjectTypeOption = {
+  value: string;
+  label: string;
+};
+
+export type ProjectRecord = {
+  id: string;
+  projectCode: string;
+  projectName: string;
+  projectType: string;
+  projectTypeLabel: string;
+  owner: string;
+  location: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type StandardSummary = {
+  projectType: string;
+  projectTypeLabel: string;
+  count: number;
+};
+
+export type ProjectDashboard = {
+  projectTypes: ProjectTypeOption[];
+  projects: ProjectRecord[];
+  standardSummaries: StandardSummary[];
+};
+
+export type CreateProjectPayload = {
+  projectName: string;
+  projectType: string;
+  owner: string;
+  location: string;
+};
+
+export type LandUseStandard = {
+  id: string;
+  projectType: string;
+  projectTypeLabel: string;
+  sourceFile: string;
+  chapterTitle: string;
+  content: string;
+  keywords: string;
+};
+
+export type LandUseStandardMatch = {
+  id: string;
+  projectId: string;
+  standardId: string;
+  matchStatus: string;
+  matchedFields: string;
+  conclusion: string;
+  createdAt: string;
+  standard: LandUseStandard;
+};

@@ -111,4 +111,53 @@ public final class DemoModels {
 
     public record PolicyCardUploadResponse(String fileName, int textLength, String message) {
     }
+
+    public record ProjectTypeOption(String value, String label) {
+    }
+
+    public record CreateProjectRequest(String projectName, String projectType, String owner, String location) {
+    }
+
+    public record ProjectRecordDto(
+            String id,
+            String projectCode,
+            String projectName,
+            String projectType,
+            String projectTypeLabel,
+            String owner,
+            String location,
+            String status,
+            String createdAt,
+            String updatedAt
+    ) {
+    }
+
+    public record StandardSummary(String projectType, String projectTypeLabel, long count) {
+    }
+
+    public record ProjectDashboard(List<ProjectTypeOption> projectTypes, List<ProjectRecordDto> projects, List<StandardSummary> standardSummaries) {
+    }
+
+    public record LandUseStandardDto(
+            String id,
+            String projectType,
+            String projectTypeLabel,
+            String sourceFile,
+            String chapterTitle,
+            String content,
+            String keywords
+    ) {
+    }
+
+    public record LandUseStandardMatchDto(
+            String id,
+            String projectId,
+            String standardId,
+            String matchStatus,
+            String matchedFields,
+            String conclusion,
+            String createdAt,
+            LandUseStandardDto standard
+    ) {
+    }
 }

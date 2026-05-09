@@ -33,7 +33,7 @@ public class DeepSeekClient {
             );
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(API_URL))
-                    .timeout(Duration.ofSeconds(45))
+                    .timeout(Duration.ofSeconds(120))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + apiKey.trim())
                     .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))

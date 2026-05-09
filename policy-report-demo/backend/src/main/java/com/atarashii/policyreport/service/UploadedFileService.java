@@ -37,6 +37,10 @@ public class UploadedFileService {
         return new FileSystemResource(path);
     }
 
+    public Path path(String fileId) {
+        return locate(fileId);
+    }
+
     public String fileName(String fileId) {
         String storedName = locate(fileId).getFileName().toString();
         int index = storedName.indexOf("__");

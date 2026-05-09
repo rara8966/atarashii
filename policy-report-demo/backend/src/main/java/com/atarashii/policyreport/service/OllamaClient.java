@@ -66,6 +66,20 @@ public class OllamaClient {
         return primary;
     }
 
+    public GenerationResult generateWithImage(String prompt, String base64Image) {
+        if (!properties.isOllamaEnabled()) {
+            return new GenerationResult(false, "", "Ollama 已在配置中关闭");
+        }
+        GenerationResult primary = generateWithImageModel(properties.getOllamaModel(), prompt, base64Image);
+        if (primary.usedOllama()) {
+            return primary;
+        }
+        if (!properties.getOllamaFallbackModel().equals(properties.getOllamaModel())) {
+            return generateWithImageModel(properties.getOllamaFallbackModel(), prompt, base64Image);
+        }
+        return primary;
+    }
+
     private GenerationResult generateWithModel(String model, String prompt) {
         try {
             Map<String, Object> payload = new HashMap<>();
@@ -84,6 +98,34 @@ public class OllamaClient {
                 return new GenerationResult(false, model, "Ollama 返回状态码 " + response.statusCode());
             }
             String text = objectMapper.readTree(response.body()).path("response").asText().trim();
+            if (text.isBlank()) {
+                return new GenerationResult(false, model, "Ollama 返回内容为空");
+            }
+            return new GenerationResult(true, model, text);
+        } catch (Exception ex) {
+            return new GenerationResult(false, model, ex.getMessage());
+        }
+    }
+
+    public GenerationResult generateWithImageModel(String model, String prompt, String base64Image) {
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("model", model);
+            payload.put("prompt", prompt);
+            payload.put("images", List.of(base64Image));
+            payload.put("stream", false);
+            payload.put("options", Map.of("temperature", 0, "num_ctx", 8192));
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(properties.getOllamaBaseUrl() + "/api/generate"))
+                    .timeout(Duration.ofSeconds(Math.max(30, properties.getOllamaTimeoutSeconds())))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                return new GenerationResult(false, model, "Ollama 返回状态码 " + response.statusCode());
+            }
+            String text = objectMapper.readTree(response.body()).path("response").asText("").trim();
             if (text.isBlank()) {
                 return new GenerationResult(false, model, "Ollama 返回内容为空");
             }

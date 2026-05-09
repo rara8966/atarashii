@@ -1,11 +1,28 @@
 server:
   port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 spring:
+  datasource:
+    url: jdbc:h2:file:./data/policy-report-demo-db;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
   servlet:
     multipart:
-      max-file-size: 80MB
-      max-request-size: 90MB
+      max-file-size: 300MB
+      max-request-size: 320MB
 
 app:
   policy-card-path: ../../2025重大项目用地政策明白卡.pdf
@@ -14,4 +31,16 @@ app:
   ollama-model: qwen25vl-7b-local:latest
   ollama-fallback-model: qwen25vl-3b-local:latest
   ollama-enabled: true
-  ollama-timeout-seconds: 20
+  ollama-timeout-seconds: 120
+  ai-full-text-chunk-size: 12000
+  ai-full-text-max-chunks: 80
+  ocr-enabled: true
+  ocr-engine: auto
+  ocr-max-pages: 120
+  ocr-dpi: 160
+  ocr-min-useful-chars: 1500
+  ocr-tesseract-command: C:/Program Files/Tesseract-OCR/tesseract.exe
+  ocr-tesseract-language: chi_sim+eng
+  ocr-tesseract-data-path:
+  ocr-tesseract-page-seg-mode: 6
+  ocr-tesseract-timeout-seconds: 90

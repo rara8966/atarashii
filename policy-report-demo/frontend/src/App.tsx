@@ -3,27 +3,36 @@ import {
   AlertTriangle,
   Bot,
   CheckCircle2,
+  Database,
   Download,
   Eye,
   FileCheck2,
   FileSearch,
   FileUp,
   FolderOpen,
+  Home,
   KeyRound,
   Loader2,
+  Plus,
   RefreshCw,
   Save,
+  Search,
   Server,
   ShieldCheck,
   Undo2
 } from 'lucide-react';
 import {
   analyzeDocument,
+  createProject,
   exportReport,
+  fetchLandStandards,
   fetchOllamaStatus,
   fetchProject,
+  fetchProjectDashboard,
+  fetchStandardMatches,
   fetchWorkspaceState,
   generateReport,
+  refreshStandardMatches,
   sourceFileUrl,
   updateField,
   updateSituation,
@@ -33,9 +42,14 @@ import {
 import type {
   AiConfig,
   AnalysisResponse,
+  CreateProjectPayload,
   DemoProject,
   EditableField,
+  LandUseStandard,
+  LandUseStandardMatch,
   OllamaStatus,
+  ProjectDashboard,
+  ProjectRecord,
   ReportResponse,
   StepWorkspace,
   WorkspaceState
@@ -43,6 +57,7 @@ import type {
 
 const AI_CONFIG_KEY = 'policy-report-demo-ai-config';
 const REPORT_DRAFT_KEY = 'policy-report-demo-report-draft';
+const ACTIVE_PROJECT_KEY = 'policy-report-demo-active-project-id';
 const STATUS_TEXT: Record<string, string> = { pass: '通过', warn: '需关注', block: '未通过', todo: '待补', info: '已触发' };
 
 type StatusKey = 'pass' | 'warn' | 'block' | 'todo' | 'info';
@@ -169,10 +184,17 @@ const CASE_GROUPS: Record<string, CaseGroup[]> = {
 };
 
 function App() {
+  const [view, setView] = useState<'home' | 'workspace'>('home');
+  const [dashboard, setDashboard] = useState<ProjectDashboard | null>(null);
+  const [activeProjectRecord, setActiveProjectRecord] = useState<ProjectRecord | null>(null);
+  const [projectForm, setProjectForm] = useState<CreateProjectPayload>({ projectName: '', projectType: 'wind-power', owner: '', location: '' });
   const [project, setProject] = useState<DemoProject | null>(null);
   const [workspace, setWorkspace] = useState<WorkspaceState | null>(null);
   const [ollama, setOllama] = useState<OllamaStatus | null>(null);
   const [selectedStep, setSelectedStep] = useState('step1');
+  const [standards, setStandards] = useState<LandUseStandard[]>([]);
+  const [standardMatches, setStandardMatches] = useState<LandUseStandardMatch[]>([]);
+  const [standardQuery, setStandardQuery] = useState('');
   const [report, setReport] = useState<ReportResponse | null>(null);
   const [reportDraft, setReportDraft] = useState(() => localStorage.getItem(REPORT_DRAFT_KEY) ?? '');
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -189,28 +211,129 @@ function App() {
     void refreshAll();
   }, []);
 
+  useEffect(() => {
+    setReportDraft(localStorage.getItem(reportDraftKey(activeProjectRecord?.id)) ?? '');
+    setReport(null);
+    setPreviewOpen(false);
+  }, [activeProjectRecord?.id]);
+
   const activeStep = useMemo(
     () => project?.steps.find((step) => step.id === selectedStep) ?? project?.steps[0],
     [project, selectedStep]
   );
   const activeWorkspace = workspace?.steps[selectedStep];
-  const activeMaterials = MATERIAL_SPECS[selectedStep] ?? [];
+  const activeMaterials = useMemo(() => buildStepMaterials(selectedStep, MATERIAL_SPECS[selectedStep] ?? [], standardMatches), [selectedStep, standardMatches]);
   const activeCases = CASE_GROUPS[selectedStep] ?? [];
   const activeAnalyses = activeWorkspace?.analyses ?? [];
   const allAnalyses = useMemo(() => Object.values(workspace?.steps ?? {}).flatMap((step) => step.analyses), [workspace]);
-  const validationRows = useMemo(() => buildValidationRows(activeWorkspace, activeMaterials, activeCases), [activeWorkspace, activeMaterials, activeCases]);
+  const validationRows = useMemo(() => addStandardMatchRows(buildValidationRows(activeWorkspace, activeMaterials, activeCases), selectedStep, standardMatches), [activeWorkspace, activeMaterials, activeCases, selectedStep, standardMatches]);
   const statusCounts = useMemo(() => countValidation(validationRows), [validationRows]);
+
+  useEffect(() => {
+    if (selectedStep === 'step6' && activeProjectRecord) {
+      void loadStandardsForActiveProject(standardQuery, true);
+    }
+  }, [selectedStep, activeProjectRecord?.id]);
 
   async function refreshAll() {
     setError('');
     try {
-      const [projectData, ollamaStatus, stateData] = await Promise.all([fetchProject(), fetchOllamaStatus(), fetchWorkspaceState()]);
+      const activeProjectId = localStorage.getItem(ACTIVE_PROJECT_KEY);
+      const [dashboardData, projectData, ollamaStatus, stateData] = await Promise.all([fetchProjectDashboard(), fetchProject(), fetchOllamaStatus(), fetchWorkspaceState(activeProjectId)]);
+      setDashboard(dashboardData);
       setProject(projectData);
       setOllama(ollamaStatus);
       setWorkspace(stateData);
+      const active = dashboardData.projects.find((item) => item.id === activeProjectId) ?? null;
+      setActiveProjectRecord(active);
     } catch (err) {
       setError(err instanceof Error ? err.message : '后端暂时不可用');
     }
+  }
+
+  async function reloadDashboard(nextActiveId?: string) {
+    const dashboardData = await fetchProjectDashboard();
+    setDashboard(dashboardData);
+    if (nextActiveId) {
+      setActiveProjectRecord(dashboardData.projects.find((item) => item.id === nextActiveId) ?? null);
+    }
+  }
+
+  async function handleCreateProject() {
+    if (!projectForm.projectName.trim()) {
+      setError('请先填写项目名称。');
+      return;
+    }
+    setLoading('create-project');
+    setError('');
+    try {
+      const created = await createProject(projectForm);
+      localStorage.setItem(ACTIVE_PROJECT_KEY, created.id);
+      setActiveProjectRecord(created);
+      setWorkspace(await fetchWorkspaceState(created.id));
+      setView('workspace');
+      setProjectForm({ projectName: '', projectType: created.projectType, owner: '', location: '' });
+      await reloadDashboard(created.id);
+      setNotice(`项目 ${created.projectCode} 已创建并落库。`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '项目创建失败');
+    } finally {
+      setLoading('');
+    }
+  }
+
+  async function openProject(record: ProjectRecord) {
+    localStorage.setItem(ACTIVE_PROJECT_KEY, record.id);
+    setActiveProjectRecord(record);
+    setWorkspace(await fetchWorkspaceState(record.id));
+    setView('workspace');
+    setNotice(`已打开项目：${record.projectName}`);
+  }
+
+  async function loadStandardsForActiveProject(query = standardQuery, ensureWorkspaceWriteback = false) {
+    if (!activeProjectRecord) return;
+    setLoading((current) => current || 'standards');
+    try {
+      const [standardData, fetchedMatches] = await Promise.all([
+        fetchLandStandards(activeProjectRecord.projectType, query, 30),
+        fetchStandardMatches(activeProjectRecord.id)
+      ]);
+      let matchData = fetchedMatches;
+      const step6Fields = workspace?.steps.step6?.fields ?? [];
+      const needsWriteback = ensureWorkspaceWriteback && !query.trim() && !step6Fields.some((field) => field.key.startsWith('standardReview.'));
+      if (needsWriteback) {
+        matchData = await refreshStandardMatches(activeProjectRecord.id);
+        setWorkspace(await fetchWorkspaceState(activeProjectRecord.id));
+      }
+      setStandards(standardData);
+      setStandardMatches(matchData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '标准库加载失败');
+    } finally {
+      setLoading((current) => current === 'standards' ? '' : current);
+    }
+  }
+
+  async function refreshProjectStandards() {
+    if (!activeProjectRecord) return;
+    setLoading('standard-match');
+    setError('');
+    try {
+      await refreshStandardReview(activeProjectRecord.id);
+      setNotice('已根据当前项目类型刷新并落库标准匹配结果。');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '标准匹配失败');
+    } finally {
+      setLoading('');
+    }
+  }
+
+  async function refreshStandardReview(projectId: string) {
+    const matches = await refreshStandardMatches(projectId);
+    setStandardMatches(matches);
+    const state = await fetchWorkspaceState(projectId);
+    setWorkspace(state);
+    return { matches, state };
   }
 
   function saveAiConfig() {
@@ -224,8 +347,8 @@ function App() {
     setLoading('policy');
     setError('');
     try {
-      const result = await uploadPolicyCard(file);
-      setWorkspace(await fetchWorkspaceState());
+      const result = await uploadPolicyCard(file, activeProjectRecord?.id);
+      setWorkspace(await fetchWorkspaceState(activeProjectRecord?.id));
       setNotice(`${result.fileName} 已持久化为当前政策明白卡，解析 ${result.textLength} 字。`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '明白卡解析失败');
@@ -244,9 +367,14 @@ function App() {
     try {
       const results: AnalysisResponse[] = [];
       for (const file of list) {
-        results.push(await analyzeDocument(file, '', aiConfig, selectedStep));
+        results.push(await analyzeDocument(file, '', aiConfig, selectedStep, activeProjectRecord?.id));
       }
-      setWorkspace(await fetchWorkspaceState());
+      let nextWorkspace = await fetchWorkspaceState(activeProjectRecord?.id);
+      if (activeProjectRecord && (selectedStep === 'step6' || results.some((result) => result.targetStep === 'step6'))) {
+        nextWorkspace = (await refreshStandardReview(activeProjectRecord.id)).state;
+      } else {
+        setWorkspace(nextWorkspace);
+      }
       setNotice(`已解析 ${list.length} 份材料，并自动归档：${summarizeRouting(results)}。`);
       if (results[0]?.targetStep) {
         setSelectedStep(results[0].targetStep);
@@ -270,7 +398,11 @@ function App() {
   async function saveFieldValue(field: EditableField, value: string) {
     setWorkspace((current) => patchField(current, field.stepId, field.key, value));
     try {
-      setWorkspace(await updateField(field.stepId, field.key, value, 'warn'));
+      const updated = await updateField(field.stepId, field.key, value, 'warn', activeProjectRecord?.id);
+      setWorkspace(updated);
+      if (activeProjectRecord && (field.stepId === 'step6' || selectedStep === 'step6')) {
+        await refreshStandardReview(activeProjectRecord.id);
+      }
       setNotice(`${field.label} 已保存并触发实时校验。`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '字段保存失败');
@@ -280,7 +412,7 @@ function App() {
   async function selectCase(groupId: string, value: string) {
     setWorkspace((current) => patchSituation(current, selectedStep, groupId, value));
     try {
-      setWorkspace(await updateSituation(selectedStep, groupId, value));
+      setWorkspace(await updateSituation(selectedStep, groupId, value, activeProjectRecord?.id));
       setNotice('情形选择已保存，校验表已实时刷新。');
     } catch (err) {
       setError(err instanceof Error ? err.message : '情形保存失败');
@@ -292,7 +424,7 @@ function App() {
     setLoading(`withdraw-${fileId}`);
     setError('');
     try {
-      setWorkspace(await withdrawDocument(fileId));
+      setWorkspace(await withdrawDocument(fileId, activeProjectRecord?.id));
       setNotice('已撤回该上传文件，并同步刷新字段、材料清单和校验结果。');
     } catch (err) {
       setError(err instanceof Error ? err.message : '材料撤回失败');
@@ -303,7 +435,7 @@ function App() {
 
   function saveDraft() {
     localStorage.setItem(AI_CONFIG_KEY, JSON.stringify(aiConfig));
-    localStorage.setItem(REPORT_DRAFT_KEY, reportDraft);
+    localStorage.setItem(reportDraftKey(activeProjectRecord?.id), reportDraft);
     setNotice('草稿已保存。字段和情形选择已落到本机后端状态库。');
   }
 
@@ -315,7 +447,7 @@ function App() {
       setReport(nextReport);
       setReportDraft(nextReport.markdown);
       setPreviewOpen(true);
-      localStorage.setItem(REPORT_DRAFT_KEY, nextReport.markdown);
+      localStorage.setItem(reportDraftKey(activeProjectRecord?.id), nextReport.markdown);
       setNotice('已生成在线 Word 预览，预览区可直接修改。');
     } catch (err) {
       setError(err instanceof Error ? err.message : '报告生成失败');
@@ -335,7 +467,7 @@ function App() {
         setReport(nextReport);
         setReportDraft(markdown);
         setPreviewOpen(true);
-        localStorage.setItem(REPORT_DRAFT_KEY, markdown);
+        localStorage.setItem(reportDraftKey(activeProjectRecord?.id), markdown);
       }
       const blob = await exportReport(format, allAnalyses, markdown);
       downloadBlob(blob, reportFileName(project?.projectName, format));
@@ -357,6 +489,24 @@ function App() {
     }
   }
 
+  if (view === 'home') {
+    return (
+      <main className="app-shell">
+        <HomeDashboard
+          dashboard={dashboard}
+          form={projectForm}
+          loading={loading === 'create-project'}
+          error={error}
+          notice={notice}
+          onFormChange={setProjectForm}
+          onCreate={() => void handleCreateProject()}
+          onOpen={(record) => void openProject(record)}
+          onRefresh={() => void refreshAll()}
+        />
+      </main>
+    );
+  }
+
   return (
     <main className="app-shell">
       <header className="top-bar">
@@ -364,12 +514,13 @@ function App() {
           <div className="brand-icon"><ShieldCheck size={21} /></div>
           <div>
             <h1>建设用地报批审查报告智能生成系统</h1>
-            <p>{project?.projectName ?? '兴宁五塘风电场一期工程'} · 一次导入 · 自动归档 · 实时校验</p>
+            <p>{activeProjectRecord?.projectName ?? project?.projectName ?? '未选择项目'} · {activeProjectRecord?.projectCode ?? '项目未落库'} · 一次导入 · 自动归档 · 实时校验</p>
           </div>
         </div>
         <div className="top-meta">
+          <button className="btn btn-outline" type="button" onClick={() => setView('home')}><Home size={16} />首页</button>
           <StatusPill ollama={ollama} />
-          <span className="project-badge">单独选址建设项目</span>
+          <span className="project-badge">{activeProjectRecord?.projectTypeLabel ?? '单独选址建设项目'}</span>
         </div>
       </header>
 
@@ -441,6 +592,19 @@ function App() {
             <ValidationTable rows={validationRows} />
           </section>
 
+          {selectedStep === 'step6' && (
+            <LandStandardPanel
+              project={activeProjectRecord}
+              standards={standards}
+              matches={standardMatches}
+              query={standardQuery}
+              loading={loading === 'standards' || loading === 'standard-match'}
+              onQueryChange={setStandardQuery}
+              onSearch={() => void loadStandardsForActiveProject()}
+              onRefreshMatch={() => void refreshProjectStandards()}
+            />
+          )}
+
           {previewOpen && (
             <section className="preview-section word-preview-section">
               <h3><span className="dot dot-blue" />在线审查报告预览</h3>
@@ -464,6 +628,252 @@ function App() {
         <button className="btn btn-primary" type="button" onClick={saveAndNext}><FileCheck2 size={18} />保存并进入下一步 →</button>
       </footer>
     </main>
+  );
+}
+
+const STEP_LABELS: Record<string, string> = { step1: '项目基本情况', step2: '申请用地现状', step3: '农用地转用', step4: '补充耕地', step5: '土地征收', step6: '土地利用', step7: '地灾压矿', step8: '信访违法' };
+
+function HomeDashboard({ dashboard, form, loading, error, notice, onFormChange, onCreate, onOpen, onRefresh }: {
+  dashboard: ProjectDashboard | null;
+  form: CreateProjectPayload;
+  loading: boolean;
+  error: string;
+  notice: string;
+  onFormChange: (form: CreateProjectPayload) => void;
+  onCreate: () => void;
+  onOpen: (project: ProjectRecord) => void;
+  onRefresh: () => void;
+}) {
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [previewWorkspace, setPreviewWorkspace] = useState<WorkspaceState | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const projectTypes = dashboard?.projectTypes ?? [];
+  const projects = dashboard?.projects ?? [];
+  const standardCount = (dashboard?.standardSummaries ?? []).reduce((sum, item) => sum + item.count, 0);
+  const previewProject = projects.find((item) => item.id === previewId) ?? null;
+
+  async function togglePreview(project: ProjectRecord) {
+    if (previewId === project.id) {
+      setPreviewId(null);
+      setPreviewWorkspace(null);
+      return;
+    }
+    setPreviewId(project.id);
+    setPreviewWorkspace(null);
+    setPreviewLoading(true);
+    try {
+      setPreviewWorkspace(await fetchWorkspaceState(project.id));
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
+  return (
+    <div className="home-shell">
+      <header className="home-header">
+        <div className="brand-block">
+          <div className="brand-icon"><ShieldCheck size={22} /></div>
+          <div>
+            <h1>建设用地报批审查报告智能生成系统</h1>
+            <p>项目建档 · 标准库落库 · 材料解析 · 八步审查</p>
+          </div>
+        </div>
+        <button className="btn btn-outline" type="button" onClick={onRefresh}><RefreshCw size={16} />刷新</button>
+      </header>
+
+      {(error || notice) && <div className={error ? 'message-strip error-strip' : 'message-strip notice-strip'}>{error ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}{error || notice}</div>}
+
+      <section className="home-grid">
+        <section className="home-panel create-project-panel">
+          <div className="panel-title"><Plus size={18} />新建项目草稿</div>
+          <div className="home-form-grid">
+            <label>项目名称<input value={form.projectName} onChange={(event) => onFormChange({ ...form, projectName: event.target.value })} placeholder="例如：兴宁五塘风电场一期工程" /></label>
+            <label>项目类型<select value={form.projectType} onChange={(event) => onFormChange({ ...form, projectType: event.target.value })}>{projectTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}</select></label>
+            <label>建设单位<input value={form.owner} onChange={(event) => onFormChange({ ...form, owner: event.target.value })} placeholder="建设单位/业主单位" /></label>
+            <label>建设地点<input value={form.location} onChange={(event) => onFormChange({ ...form, location: event.target.value })} placeholder="市、县、乡镇或具体位置" /></label>
+          </div>
+          <button className="btn btn-primary create-btn" type="button" onClick={onCreate} disabled={loading}>{loading ? <Loader2 className="spin" size={18} /> : <Plus size={18} />}创建项目并进入工作台</button>
+        </section>
+
+        <section className="home-panel stats-panel">
+          <div className="panel-title"><Database size={18} />系统库状态</div>
+          <div className="metric-grid">
+            <div className="metric-cell"><strong>{projects.length}</strong><span>落库项目</span></div>
+            <div className="metric-cell"><strong>{standardCount}</strong><span>用地标准条目</span></div>
+            <div className="metric-cell"><strong>{dashboard?.standardSummaries.length ?? 0}</strong><span>项目类型</span></div>
+          </div>
+          <div className="standard-summary-list">
+            {(dashboard?.standardSummaries ?? []).map((item) => <span key={item.projectType}>{item.projectTypeLabel}：{item.count}</span>)}
+          </div>
+        </section>
+      </section>
+
+      <section className="home-panel project-list-panel">
+        <div className="panel-title"><FolderOpen size={18} />草稿箱 / 历史项目</div>
+        {projects.length === 0 ? <p className="quiet">还没有落库项目，先从上方创建一个项目草稿。</p> : (
+          <div className="project-table-wrap">
+            <table className="project-table">
+              <thead><tr><th>系统编号</th><th>项目名称</th><th>项目类型</th><th>建设单位</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead>
+              <tbody>{projects.map((item) => (
+                <tr key={item.id} className={previewId === item.id ? 'project-row-active' : ''}>
+                  <td>{item.projectCode}</td>
+                  <td><strong>{item.projectName}</strong><div className="subtle-text">{item.location || '未填写地点'}</div></td>
+                  <td>{item.projectTypeLabel}</td>
+                  <td>{item.owner || '未填写'}</td>
+                  <td><StatusBadge status={item.status === '草稿' ? 'todo' : 'pass'} /></td>
+                  <td>{formatTime(item.updatedAt)}</td>
+                  <td className="project-actions-cell">
+                    <button className={`modify-btn ${previewId === item.id ? 'active' : ''}`} type="button" onClick={() => void togglePreview(item)}><FileSearch size={13} />{previewId === item.id ? '收起' : '查看'}</button>
+                    <button className="modify-btn open-btn" type="button" onClick={() => onOpen(item)}><FolderOpen size={13} />工作台</button>
+                  </td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {previewProject && (
+        <section className="home-panel project-preview-panel">
+          <div className="panel-title">
+            <FileSearch size={18} />项目分析摘要 — {previewProject.projectName}
+            <span className="preview-badge">{previewProject.projectCode}</span>
+            <button className="btn btn-primary preview-enter-btn" type="button" onClick={() => onOpen(previewProject)}><FolderOpen size={15} />进入工作台</button>
+          </div>
+          {previewLoading ? (
+            <div className="preview-loading"><Loader2 className="spin" size={20} />正在加载项目分析数据…</div>
+          ) : previewWorkspace ? (
+            <ProjectPreviewContent workspace={previewWorkspace} project={previewProject} />
+          ) : (
+            <p className="quiet">加载失败，请重试。</p>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
+
+function ProjectPreviewContent({ workspace, project }: { workspace: WorkspaceState; project: ProjectRecord }) {
+  const stepIds = ['step1', 'step2', 'step3', 'step4', 'step5', 'step6', 'step7', 'step8'];
+  const totalAnalyses = stepIds.reduce((sum, id) => sum + (workspace.steps[id]?.analyses.length ?? 0), 0);
+  const stepsWithContent = stepIds.filter((id) => (workspace.steps[id]?.analyses.length ?? 0) > 0);
+  const allFields = stepIds.flatMap((id) => workspace.steps[id]?.fields ?? []).filter((field) => field.value && !field.key.startsWith('standardReview.'));
+
+  return (
+    <div className="project-preview-content">
+      <div className="preview-meta-row">
+        <span><strong>项目类型：</strong>{project.projectTypeLabel}</span>
+        <span><strong>建设单位：</strong>{project.owner || '未填写'}</span>
+        <span><strong>建设地点：</strong>{project.location || '未填写'}</span>
+        <span><strong>项目状态：</strong>{project.status}</span>
+      </div>
+
+      <div className="preview-step-grid">
+        {stepIds.map((id) => {
+          const count = workspace.steps[id]?.analyses.length ?? 0;
+          return (
+            <div key={id} className={`preview-step-cell ${count > 0 ? 'has-content' : 'no-content'}`}>
+              <span className="preview-step-num">{id.replace('step', '')}</span>
+              <span className="preview-step-name">{STEP_LABELS[id]}</span>
+              <span className="preview-step-count">{count > 0 ? `${count} 份材料` : '未上传'}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="preview-summary-row">
+        <span>共上传 <strong>{totalAnalyses}</strong> 份材料，覆盖 <strong>{stepsWithContent.length}</strong>/8 个审查步骤</span>
+        {stepsWithContent.length === 0 && <span className="quiet-inline">（本项目尚未上传任何材料，请进入工作台开始分析）</span>}
+      </div>
+
+      {allFields.length > 0 && (
+        <div className="preview-fields-section">
+          <div className="preview-section-title">已抽取的关键字段</div>
+          <div className="preview-fields-grid">
+            {allFields.slice(0, 12).map((field) => (
+              <div key={`${field.stepId}-${field.key}`} className="preview-field-item">
+                <span className="preview-field-label">{field.label}</span>
+                <span className="preview-field-value">{field.value}</span>
+              </div>
+            ))}
+            {allFields.length > 12 && <div className="preview-field-more">…还有 {allFields.length - 12} 个字段，进入工作台查看</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LandStandardPanel({ project, standards, matches, query, loading, onQueryChange, onSearch, onRefreshMatch }: {
+  project: ProjectRecord | null;
+  standards: LandUseStandard[];
+  matches: LandUseStandardMatch[];
+  query: string;
+  loading: boolean;
+  onQueryChange: (value: string) => void;
+  onSearch: () => void;
+  onRefreshMatch: () => void;
+}) {
+  const matchByStandardId = new Map(matches.map((match) => [match.standardId, match]));
+  return (
+    <section className="preview-section standard-panel">
+      <div className="standard-panel-head">
+        <h3><span className="dot dot-blue" />用地标准库匹配</h3>
+        <div className="standard-actions">
+          <div className="search-box"><Search size={15} /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="搜索表名、章节、指标关键词" /></div>
+          <button className="btn btn-outline" type="button" onClick={onSearch} disabled={loading}>{loading ? <Loader2 className="spin" size={16} /> : <Search size={16} />}查询</button>
+          <button className="btn btn-primary" type="button" onClick={onRefreshMatch} disabled={!project || loading}>{loading ? <Loader2 className="spin" size={16} /> : <Database size={16} />}刷新并落库</button>
+        </div>
+      </div>
+      {!project ? <p className="quiet">请先回首页创建或打开项目，系统会按项目类型匹配标准库。</p> : (
+        <>
+          <div className="standard-context">
+            <span>当前项目类型：{project.projectTypeLabel}</span>
+            <span>已查到标准条目：{standards.length}</span>
+            <span>已落库匹配：{matches.length}</span>
+            {matches.length === 0 && !loading && <span className="standard-hint">点击"刷新并落库"自动按项目类型匹配标准指标，匹配后结果持久保存。</span>}
+          </div>
+          {matches.length === 0 && !loading && standards.length > 0 && (
+            <div className="standard-empty-prompt">
+              <Database size={20} />
+              <div>
+                <strong>标准库已就绪（{standards.length} 条），尚未为本项目生成匹配结论。</strong>
+                <span>点击右上方"刷新并落库"按钮，系统会自动按项目类型、申报面积、装机容量等参数匹配用地指标，并写入第六步校验结果。</span>
+              </div>
+            </div>
+          )}
+          {matches.length > 0 && <div className="match-list">{matches.map((match) => {
+            const status = standardMatchStatus(match.matchStatus);
+            const groupedFields = groupMatchedFields(match.matchedFields);
+            return <div className="match-item" key={match.id}>
+              <StatusBadge status={status} />
+              <div className="match-main">
+                <div className="match-title-row"><strong>{match.standard.chapterTitle}</strong><span>{standardMatchLabel(match)}</span></div>
+                <p>{match.conclusion}</p>
+                <div className="match-field-groups">
+                  {groupedFields.project.length > 0 && <ChipGroup title="项目识别参数" items={groupedFields.project} />}
+                  {groupedFields.standard.length > 0 && <ChipGroup title="标准库指标" items={groupedFields.standard} />}
+                  {groupedFields.missing.length > 0 && <ChipGroup title="待补项目参数" items={groupedFields.missing} />}
+                </div>
+              </div>
+            </div>;
+          })}</div>}
+          <div className="standard-list">
+            {standards.length === 0 ? <p className="quiet">当前项目类型暂无标准条目，或搜索条件过窄。</p> : standards.map((standard) => {
+              const match = matchByStandardId.get(standard.id);
+              return <article className="standard-card" key={standard.id}>
+              <div className="standard-card-title">
+                <div className="standard-card-heading"><strong>{standard.chapterTitle}</strong>{match && <StatusBadge status={standardMatchStatus(match.matchStatus)} />}</div>
+                <span>{standard.sourceFile}</span>
+              </div>
+              <p>{formatStandardContent(standard.content)}</p>
+            </article>;
+            })}
+          </div>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -520,6 +930,10 @@ function MaterialItem({ spec: material, analyses, workspaceStep, onWithdraw }: {
   );
 }
 
+function ChipGroup({ title, items }: { title: string; items: string[] }) {
+  return <div className="match-chip-group"><span className="match-chip-title">{title}</span><div className="match-fields">{items.map((item) => <span key={item}>{item}</span>)}</div></div>;
+}
+
 function ParsedFileCards({ analyses, onWithdraw }: { analyses: AnalysisResponse[]; onWithdraw: (fileId?: string | null) => void }) {
   return (
     <section className="preview-section">
@@ -530,11 +944,24 @@ function ParsedFileCards({ analyses, onWithdraw }: { analyses: AnalysisResponse[
             <div className="parsed-card-head"><div><button className="file-title-link" type="button" onClick={() => openSourceFile(analysis.fileId)}>{analysis.fileName}</button><p>{analysis.detectedDocumentType} · 自动归档到 {analysis.targetStep}</p></div><div className="parsed-card-actions"><StatusBadge status={analysis.extractedFields.length > 0 ? 'pass' : 'warn'} /><button className="withdraw-btn" type="button" onClick={() => onWithdraw(analysis.fileId)} title="撤回该文件"><Undo2 size={13} />撤回</button></div></div>
             <div className="parsed-metrics"><span>文本 {analysis.textLength} 字</span><span>字段 {analysis.extractedFields.length} 个</span><span>校验 {analysis.policyChecks.length} 条</span><span>{analysis.aiAdvice.provider} · {analysis.aiAdvice.model}</span></div>
             <p className="ai-summary"><Bot size={15} />{analysis.aiAdvice.summary}</p>
+            <AiAdvicePanel advice={analysis.aiAdvice} />
           </article>)}
         </div>
       )}
     </section>
   );
+}
+
+function AiAdvicePanel({ advice }: { advice: AnalysisResponse['aiAdvice'] }) {
+  const groups = [
+    { title: '可改', items: advice.editablePoints },
+    { title: '待补', items: advice.missingMaterials },
+    { title: '风险', items: advice.riskPoints }
+  ].filter((group) => group.items.length > 0);
+  return <div className="ai-advice-panel">
+    {groups.length > 0 && <div className="ai-advice-lists">{groups.map((group) => <div className="ai-advice-list" key={group.title}><strong>{group.title}</strong>{group.items.map((item) => <span key={item}>{item}</span>)}</div>)}</div>}
+    {advice.rawText && <details className="ai-raw" open><summary>AI完整审查意见</summary><pre>{advice.rawText}</pre></details>}
+  </div>;
 }
 
 function FieldsTable({ fields, onSave }: { fields: EditableField[]; onSave: (field: EditableField, value: string) => void }) {
@@ -599,6 +1026,10 @@ function readAiConfig(): AiConfig {
   }
 }
 
+function reportDraftKey(projectId?: string | null) {
+  return projectId ? `${REPORT_DRAFT_KEY}:${projectId}` : REPORT_DRAFT_KEY;
+}
+
 function spec(id: string, label: string, required: boolean, sub: string, keywords: string[], condition?: MaterialSpec['condition']): MaterialSpec {
   return { id, label, required, sub, keywords, condition };
 }
@@ -608,8 +1039,30 @@ function group(id: string, title: string, labels: string[]): CaseGroup {
 }
 
 function matchesMaterial(analysis: AnalysisResponse, material: MaterialSpec) {
-  const haystack = `${analysis.fileName} ${analysis.detectedDocumentType} ${analysis.textPreview}`.toLowerCase();
+  const fieldText = analysis.extractedFields.map((field) => `${field.label} ${field.value}`).join(' ');
+  const haystack = `${analysis.fileName} ${analysis.detectedDocumentType} ${analysis.textPreview} ${fieldText}`.toLowerCase();
   return material.keywords.some((keyword) => haystack.includes(keyword.toLowerCase()));
+}
+
+function buildStepMaterials(stepId: string, baseMaterials: MaterialSpec[], matches: LandUseStandardMatch[]) {
+  if (stepId !== 'step6' || matches.length === 0) return baseMaterials;
+  const text = matches.map((match) => `${match.standard.chapterTitle} ${match.standard.content} ${match.matchedFields} ${match.conclusion}`).join(' ');
+  const dynamic: MaterialSpec[] = [
+    spec('standard-scale', '建设规模及功能分区说明', true, '标准库触发：支撑指标适用范围、分项面积和计算口径', ['建设规模', '功能分区', '主要工程数量', '用地统计', '申报面积'])
+  ];
+  if (/线路|路线|正线|道路|路基|区间/.test(text)) {
+    dynamic.push(spec('standard-line-length', '线路/道路长度测算表', true, '标准库触发：用于 hm²/km、桥隧比、路基长度等指标测算', ['线路长度', '正线长度', '路线全长', '线路全长', '建设长度', '道路长度', 'km', '公里']));
+  }
+  if (/桥梁|桥隧/.test(text)) {
+    dynamic.push(spec('standard-bridge-length', '桥梁长度及桥隧比材料', true, '标准库触发：核对桥梁计算单量、正线长度和地形条件', ['桥梁长度', '桥梁总长', '桥隧比', '桥长']));
+  }
+  if (/隧道/.test(text)) {
+    dynamic.push(spec('standard-tunnel-length', '隧道长度及地形条件材料', true, '标准库触发：核对隧道计算单量、正线长度和地形条件', ['隧道长度', '隧道总长', '隧长', '地形类型']));
+  }
+  if (/车站|中间站|站场/.test(text)) {
+    dynamic.push(spec('standard-station-scale', '车站/站场规模说明', true, '标准库触发：核对站型、股道数和站场面积', ['车站', '站场', '中间站', '股道', '站型']));
+  }
+  return [...baseMaterials, ...dynamic.filter((item) => !baseMaterials.some((base) => base.id === item.id))];
 }
 
 function missingRequired(materials: MaterialSpec[], analyses: AnalysisResponse[], step?: StepWorkspace) {
@@ -632,6 +1085,20 @@ function buildValidationRows(step: StepWorkspace | undefined, materials: Materia
   ];
   for (const check of step?.checklist ?? []) rows.push({ item: check.title, status: normalizeStatus(check.status), detail: check.detail });
   return rows;
+}
+
+function addStandardMatchRows(rows: ValidationRow[], selectedStep: string, matches: LandUseStandardMatch[]): ValidationRow[] {
+  if (selectedStep !== 'step6' || matches.length === 0 || rows.some((row) => row.item.startsWith('标准复核：'))) {
+    return rows;
+  }
+  return [
+    ...rows,
+    ...matches.map((match) => ({
+      item: `标准复核：${match.standard.chapterTitle}`,
+      status: standardMatchValidationStatus(match.matchStatus),
+      detail: match.conclusion
+    }))
+  ];
 }
 
 function isMaterialRequired(material: MaterialSpec, step?: StepWorkspace) {
@@ -705,9 +1172,58 @@ function reportFileName(projectName: string | undefined, format: 'md' | 'docx') 
   return `${projectName || '建设用地报批审查报告'}.${format}`.replace(/[\\/:*?"<>|]/g, '_');
 }
 
+function formatTime(value: string) {
+  if (!value) return '未记录';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.replace('T', ' ').slice(0, 16);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
 function normalizeStatus(status: string): StatusKey {
   if (status === 'pass' || status === 'warn' || status === 'block' || status === 'todo' || status === 'info') return status;
   return 'todo';
+}
+
+function standardMatchStatus(status: string): StatusKey {
+  if (status.includes('通过')) return 'pass';
+  if (status.includes('缺参数')) return 'todo';
+  if (status.includes('未通过')) return 'block';
+  return 'warn';
+}
+
+function standardMatchValidationStatus(status: string): StatusKey {
+  if (status.includes('通过')) return 'pass';
+  if (status.includes('未通过')) return 'block';
+  return 'warn';
+}
+
+function standardMatchLabel(match: LandUseStandardMatch) {
+  if (match.matchStatus.includes('通过')) return '项目测算通过';
+  if (match.matchStatus.includes('缺参数')) return '标准库指标：待补项目参数';
+  if (match.matchStatus.includes('需关注')) return '标准库指标：需复核适用性';
+  return match.matchStatus;
+}
+
+function splitMatchedFields(value: string) {
+  return value.split(';').map((item) => item.trim()).filter(Boolean);
+}
+
+function groupMatchedFields(value: string) {
+  const grouped = { project: [] as string[], standard: [] as string[], missing: [] as string[] };
+  for (const item of splitMatchedFields(value)) {
+    if (item.startsWith('标准指标=')) {
+      grouped.standard.push(item.replace(/^标准指标=/, ''));
+    } else if (item.includes('缺少') || item.includes('暂未')) {
+      grouped.missing.push(item);
+    } else {
+      grouped.project.push(item);
+    }
+  }
+  return grouped;
+}
+
+function formatStandardContent(value: string) {
+  return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).join('\n');
 }
 
 function statusIcon(status: string) {

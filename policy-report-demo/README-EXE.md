@@ -1,29 +1,37 @@
-# Policy Report Demo - EXE Edition
+# 建设用地报批审查报告智能生成系统 - EXE 版
 
-This package does not require JDK, Maven, or Node.js on the client machine.
-It does not include any local LLM model files.
+这个包给客户电脑直接演示使用，不要求客户安装 JDK、Maven、Node.js，也不包含任何本地大模型文件。
 
-## Start
+## 启动
 
-Double-click `start.bat`, or open `PolicyReportDemo\PolicyReportDemo.exe` directly.
+双击 `启动.bat` 或 `start.bat`，也可以直接打开 `PolicyReportDemo\PolicyReportDemo.exe`。
 
-The app starts a console window and opens the browser automatically.
-If the browser does not open, visit:
+启动后会出现一个控制台窗口，并自动打开浏览器。如果浏览器没有自动打开，手动访问：
 
 http://127.0.0.1:8080/
 
-Close the console window to stop the demo.
+关闭控制台窗口即可停止系统。
 
-## DeepSeek
+## 本版功能
 
-Choose DeepSeek in the AI configuration panel, then enter the client's DeepSeek API Key.
-The model name can be:
+- 首页项目库：可以新建项目、选择工程类型、填写建设单位和建设地点。
+- 实际落库：项目档案、用地标准库、项目标准匹配结果使用本地 H2 文件数据库保存。
+- 用地标准库：已内置 `土地用地标准` 文件夹提取出的 19 个 DOCX 标准文件，启动后自动导入为 476 条标准条目。
+- 多项目类型：支持风电、公路、铁路、机场、煤炭、石油天然气、公共文化体育设施等 9 类项目。
+- 八步审查：材料一把导入后自动归档到八步，字段、情形选择、实时校验和在线报告预览保持可用。
+- 第六步土地利用：按当前项目类型查询标准条目，并可点击“刷新并落库”生成项目-标准匹配记录；对可识别的标准指标会自动估算用地上限，显示“通过 / 需关注 / 缺参数”。
+- 风电用地标准实测：示例项目可按 `表3.1.2 风电机组建设用地指标` 自动识别 900 m²/台、5 台风机和 0.38 公顷申报面积，测算上限约 0.45 公顷并判定通过。
+
+## DeepSeek 配置
+
+在左侧 AI 配置中选择 DeepSeek，填入客户自己的 DeepSeek API Key。模型名可用：
 
 deepseek-chat
 
-The API Key is stored only in the current browser.
+API Key 只保存在当前浏览器本地。
 
-## Notes
+## 数据说明
 
-This package includes the Java runtime and the demo application only.
-It does not include node_modules, Maven repositories, local uploaded data, or local model files.
+系统数据默认保存在程序运行目录下的 `data` 文件夹中。重新解压一份干净包会生成新的本地数据库。
+
+交付包不包含 `node_modules`、Maven 仓库、本地上传材料、测试数据库或本地模型文件。

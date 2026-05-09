@@ -83,18 +83,18 @@ public class DemoController {
     }
 
     @GetMapping("/workspace/state")
-    public WorkspaceState workspaceState() {
-        return workspaceStateService.getState();
+    public WorkspaceState workspaceState(@RequestParam(value = "projectId", required = false) String projectId) {
+        return workspaceStateService.getState(projectId);
     }
 
     @PutMapping("/workspace/fields")
-    public WorkspaceState updateField(@RequestBody FieldUpdateRequest request) {
-        return workspaceStateService.updateField(request);
+    public WorkspaceState updateField(@RequestParam(value = "projectId", required = false) String projectId, @RequestBody FieldUpdateRequest request) {
+        return workspaceStateService.updateField(projectId, request);
     }
 
     @PutMapping("/workspace/situations")
-    public WorkspaceState updateSituation(@RequestBody SituationUpdateRequest request) {
-        return workspaceStateService.updateSituation(request);
+    public WorkspaceState updateSituation(@RequestParam(value = "projectId", required = false) String projectId, @RequestBody SituationUpdateRequest request) {
+        return workspaceStateService.updateSituation(projectId, request);
     }
 
     @PostMapping(value = "/documents/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -103,14 +103,16 @@ public class DemoController {
                                                     @RequestParam(value = "fallbackStep", required = false) String fallbackStep,
                                                     @RequestParam(value = "aiProvider", required = false) String aiProvider,
                                                     @RequestParam(value = "deepseekApiKey", required = false) String deepseekApiKey,
-                                                    @RequestParam(value = "deepseekModel", required = false) String deepseekModel) {
-        return documentAnalysisService.analyze(file, targetStep, fallbackStep, new AiConfig(aiProvider, deepseekApiKey, deepseekModel));
+                                                    @RequestParam(value = "deepseekModel", required = false) String deepseekModel,
+                                                    @RequestParam(value = "projectId", required = false) String projectId) {
+        return documentAnalysisService.analyze(file, targetStep, fallbackStep, new AiConfig(aiProvider, deepseekApiKey, deepseekModel), projectId);
     }
 
     @PostMapping(value = "/policy-card/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public PolicyCardUploadResponse uploadPolicyCard(@RequestParam("file") MultipartFile file) {
+    public PolicyCardUploadResponse uploadPolicyCard(@RequestParam("file") MultipartFile file,
+                                                     @RequestParam(value = "projectId", required = false) String projectId) {
         var parsed = policyKnowledgeService.replacePolicyCard(file);
-        workspaceStateService.registerPolicyCard(parsed.fileName());
+        workspaceStateService.registerPolicyCard(projectId, parsed.fileName());
         int textLength = parsed.text() == null ? 0 : parsed.text().length();
         return new PolicyCardUploadResponse(parsed.fileName(), textLength, "明白卡已单独载入，后续分析会优先使用这份材料。");
     }
@@ -125,9 +127,9 @@ public class DemoController {
     }
 
     @DeleteMapping("/documents/{fileId}")
-    public WorkspaceState withdrawDocument(@PathVariable String fileId) {
+    public WorkspaceState withdrawDocument(@PathVariable String fileId, @RequestParam(value = "projectId", required = false) String projectId) {
         uploadedFileService.delete(fileId);
-        return workspaceStateService.removeAnalysis(fileId);
+        return workspaceStateService.removeAnalysis(projectId, fileId);
     }
 
     @PostMapping("/reports/generate")
