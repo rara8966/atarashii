@@ -15,13 +15,24 @@ import type {
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, options);
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `请求失败: ${response.status}`);
+async function request<T>(path: string, options?: RequestInit, timeoutMs = 480_000): Promise<T> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${API_BASE}${path}`, { signal: ctrl.signal, ...options });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `请求失败: ${response.status}`);
+    }
+    return response.json() as Promise<T>;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('请求超时（文件过大或AI分析耗时过长），请分批上传或减少单次上传数量。');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-  return response.json() as Promise<T>;
 }
 
 export function fetchProject(): Promise<DemoProject> {

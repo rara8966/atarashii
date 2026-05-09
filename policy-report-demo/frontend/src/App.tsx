@@ -183,6 +183,30 @@ const CASE_GROUPS: Record<string, CaseGroup[]> = {
   ]
 };
 
+async function collectDropFiles(event: React.DragEvent): Promise<File[]> {
+  const entries = Array.from(event.dataTransfer.items)
+    .map((item) => item.webkitGetAsEntry?.())
+    .filter((e): e is FileSystemEntry => e != null);
+  if (entries.length === 0) return Array.from(event.dataTransfer.files);
+
+  async function readEntry(entry: FileSystemEntry): Promise<File[]> {
+    if (entry.isFile) {
+      return new Promise((resolve) => (entry as FileSystemFileEntry).file((f) => resolve([f]), () => resolve([])));
+    }
+    if (entry.isDirectory) {
+      const reader = (entry as FileSystemDirectoryEntry).createReader();
+      const all: FileSystemEntry[] = [];
+      await new Promise<void>((resolve) => {
+        const next = () => reader.readEntries((batch) => { if (batch.length === 0) { resolve(); } else { all.push(...batch); next(); } }, () => resolve());
+        next();
+      });
+      return (await Promise.all(all.map(readEntry))).flat();
+    }
+    return [];
+  }
+  return (await Promise.all(entries.map(readEntry))).flat();
+}
+
 function App() {
   const [view, setView] = useState<'home' | 'workspace'>('home');
   const [dashboard, setDashboard] = useState<ProjectDashboard | null>(null);
@@ -202,6 +226,7 @@ function App() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [dragTarget, setDragTarget] = useState('');
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; fileName: string } | null>(null);
   const [aiConfig, setAiConfig] = useState<AiConfig>(() => readAiConfig());
   const policyInputRef = useRef<HTMLInputElement | null>(null);
   const bulkInputRef = useRef<HTMLInputElement | null>(null);
@@ -364,26 +389,44 @@ function App() {
     lastFilesRef.current = list;
     setLoading('bulk');
     setError('');
+    setUploadProgress({ current: 0, total: list.length, fileName: '' });
     try {
-      const results: AnalysisResponse[] = [];
-      for (const file of list) {
-        results.push(await analyzeDocument(file, '', aiConfig, selectedStep, activeProjectRecord?.id));
-      }
+      const CONCURRENCY = 20;
+      const results: (AnalysisResponse | null)[] = new Array(list.length).fill(null);
+      const failed: string[] = [];
+      let completed = 0;
+
+      const pool = list.map((file, i) => async () => {
+        try {
+          results[i] = await analyzeDocument(file, '', aiConfig, selectedStep, activeProjectRecord?.id);
+        } catch {
+          failed.push(file.name);
+        } finally {
+          completed++;
+          setUploadProgress({ current: completed, total: list.length, fileName: file.name });
+        }
+      });
+
+      const worker = async () => { while (pool.length > 0) await pool.shift()!(); };
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, pool.length) }, worker));
+
+      const valid = results.filter((r): r is AnalysisResponse => r !== null);
       let nextWorkspace = await fetchWorkspaceState(activeProjectRecord?.id);
-      if (activeProjectRecord && (selectedStep === 'step6' || results.some((result) => result.targetStep === 'step6'))) {
+      if (activeProjectRecord && (selectedStep === 'step6' || valid.some((r) => r.targetStep === 'step6'))) {
         nextWorkspace = (await refreshStandardReview(activeProjectRecord.id)).state;
       } else {
         setWorkspace(nextWorkspace);
       }
-      setNotice(`已解析 ${list.length} 份材料，并自动归档：${summarizeRouting(results)}。`);
-      if (results[0]?.targetStep) {
-        setSelectedStep(results[0].targetStep);
-      }
+      const summary = `已解析 ${valid.length} 份材料，并自动归档：${summarizeRouting(valid)}${failed.length > 0 ? `；${failed.length} 份失败：${failed.slice(0, 3).join('、')}${failed.length > 3 ? ' 等' : ''}` : ''}。`;
+      if (failed.length > 0 && valid.length === 0) setError(summary); else setNotice(summary);
+      const firstStep = valid.find((r) => r.targetStep)?.targetStep;
+      if (firstStep) setSelectedStep(firstStep);
     } catch (err) {
       setError(err instanceof Error ? err.message : '批量解析失败');
     } finally {
       setLoading('');
       setDragTarget('');
+      setUploadProgress(null);
     }
   }
 
@@ -546,7 +589,7 @@ function App() {
           <UploadDropZone title="政策明白卡" subtitle={activeWorkspace?.policyCardFileName ?? '根目录明白卡'} loading={loading === 'policy'} dragging={dragTarget === 'policy'} onPick={() => policyInputRef.current?.click()} onFiles={handlePolicyCard} onDrag={(value) => setDragTarget(value ? 'policy' : '')} />
           <input ref={policyInputRef} className="hidden-input" type="file" accept=".pdf,.doc,.docx,.txt,.md" onChange={(event) => { void handlePolicyCard(event.target.files ?? []); event.currentTarget.value = ''; }} />
 
-          <UploadDropZone title="一把导入全部材料" subtitle="把 PDF、Word、图片、txt 全部拖进来，系统按文件名和内容归档到八步" loading={loading === 'bulk'} dragging={dragTarget === 'bulk'} onPick={() => bulkInputRef.current?.click()} onFiles={handleBulkFiles} onDrag={(value) => setDragTarget(value ? 'bulk' : '')} />
+          <UploadDropZone title="一把导入全部材料" subtitle="把 PDF、Word、图片、txt 全部拖进来，系统按文件名和内容归档到八步" loading={loading === 'bulk'} dragging={dragTarget === 'bulk'} progress={uploadProgress} onPick={() => bulkInputRef.current?.click()} onFiles={handleBulkFiles} onDrag={(value) => setDragTarget(value ? 'bulk' : '')} />
           <input ref={bulkInputRef} className="hidden-input" type="file" multiple accept=".pdf,.doc,.docx,.txt,.md,.html,.png,.jpg,.jpeg" onChange={(event) => { void handleBulkFiles(event.target.files); event.currentTarget.value = ''; }} />
 
           <section className="card material-ledger">
@@ -895,12 +938,19 @@ function StepIndicator({ project, workspace, selectedStep, onSelect }: { project
   );
 }
 
-function UploadDropZone({ title, subtitle, loading, dragging, onPick, onFiles, onDrag }: { title: string; subtitle: string; loading: boolean; dragging: boolean; onPick: () => void; onFiles: (files: FileList | File[]) => void; onDrag: (value: boolean) => void }) {
+function UploadDropZone({ title, subtitle, loading, dragging, progress, onPick, onFiles, onDrag }: { title: string; subtitle: string; loading: boolean; dragging: boolean; progress?: { current: number; total: number; fileName: string } | null; onPick: () => void; onFiles: (files: FileList | File[]) => void; onDrag: (value: boolean) => void }) {
+  const pct = progress ? Math.round((progress.current / progress.total) * 100) : 0;
   return (
-    <section className={dragging ? 'upload-dropzone dragging' : 'upload-dropzone'} onDragOver={(event) => { event.preventDefault(); onDrag(true); }} onDragLeave={() => onDrag(false)} onDrop={(event) => { event.preventDefault(); onDrag(false); void onFiles(event.dataTransfer.files); }}>
+    <section className={dragging ? 'upload-dropzone dragging' : 'upload-dropzone'} onDragOver={(event) => { event.preventDefault(); onDrag(true); }} onDragLeave={() => onDrag(false)} onDrop={(event) => { event.preventDefault(); onDrag(false); void collectDropFiles(event).then(onFiles); }}>
       <FileUp size={24} />
       <div><strong>{title}</strong><span>{subtitle}</span></div>
       <button className="btn btn-outline full" type="button" onClick={onPick} disabled={loading}>{loading ? <Loader2 className="spin" size={16} /> : <FileSearch size={16} />}选择/拖入</button>
+      {progress && (
+        <div className="upload-progress">
+          <div className="upload-progress-bar" style={{ width: `${pct}%` }} />
+          <span className="upload-progress-label">{progress.current} / {progress.total} — {progress.fileName}</span>
+        </div>
+      )}
     </section>
   );
 }
