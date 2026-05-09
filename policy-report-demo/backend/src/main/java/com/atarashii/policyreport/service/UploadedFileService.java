@@ -7,6 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -85,7 +86,16 @@ public class UploadedFileService {
     }
 
     private String safeFileName(String name) {
-        String fallback = name == null || name.isBlank() ? "upload.bin" : name;
-        return fallback.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+        if (name == null || name.isBlank()) return "upload.bin";
+        // Recover filenames decoded as Latin-1 only when the string is still Latin-1-shaped.
+        if (!name.contains("�") && name.chars().allMatch(ch -> ch <= 0xFF)) {
+            try {
+                String recovered = new String(name.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+                if (!recovered.contains("�") && !recovered.equals(name)) {
+                    name = recovered;
+                }
+            } catch (Exception ignored) {}
+        }
+        return name.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
     }
 }

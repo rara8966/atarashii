@@ -923,7 +923,7 @@ function MaterialItem({ spec: material, analyses, workspaceStep, onWithdraw }: {
         <span className={uploaded ? 'badge-uploaded' : skipped ? 'badge-skipped' : required ? 'badge-required' : 'badge-optional'}>{uploaded ? '已传' : skipped ? '无需上传' : required ? '必传' : '选传'}</span>
       </div>
       <div className="file-info">
-        {uploaded ? matches.map((analysis) => <span className="source-file-actions" key={analysis.fileId || analysis.fileName}><button className="source-link" type="button" onClick={() => openSourceFile(analysis.fileId)}>{analysis.fileName}</button><button className="withdraw-btn" type="button" onClick={() => onWithdraw(analysis.fileId)} title="撤回该材料"><Undo2 size={13} />撤回</button></span>) : <span className="upload-hint">{skipped ? '当前项目情形无需上传' : required ? '尚未识别到该必传材料' : '项目涉及时上传'}</span>}
+        {uploaded ? matches.map((analysis) => <span className="source-file-actions" key={analysis.fileId || analysis.fileName}><button className="source-link" type="button" onClick={() => openSourceFile(analysis.fileId)}>{safeFileName(analysis.fileName)}</button><button className="withdraw-btn" type="button" onClick={() => onWithdraw(analysis.fileId)} title="撤回该材料"><Undo2 size={13} />撤回</button></span>) : <span className="upload-hint">{skipped ? '当前项目情形无需上传' : required ? '尚未识别到该必传材料' : '项目涉及时上传'}</span>}
         <StatusBadge status={uploaded || skipped ? 'pass' : required ? 'block' : 'todo'} />
       </div>
     </div>
@@ -941,7 +941,7 @@ function ParsedFileCards({ analyses, onWithdraw }: { analyses: AnalysisResponse[
       {analyses.length === 0 ? <p className="quiet">把材料一股脑拖进左侧上传框后，每个文件会在这里单独生成一个解析卡片。</p> : (
         <div className="parsed-stack">
           {analyses.map((analysis) => <article className="parsed-card" key={analysis.fileId || `${analysis.fileName}-${analysis.size}`}>
-            <div className="parsed-card-head"><div><button className="file-title-link" type="button" onClick={() => openSourceFile(analysis.fileId)}>{analysis.fileName}</button><p>{analysis.detectedDocumentType} · 自动归档到 {analysis.targetStep}</p></div><div className="parsed-card-actions"><StatusBadge status={analysis.extractedFields.length > 0 ? 'pass' : 'warn'} /><button className="withdraw-btn" type="button" onClick={() => onWithdraw(analysis.fileId)} title="撤回该文件"><Undo2 size={13} />撤回</button></div></div>
+            <div className="parsed-card-head"><div><button className="file-title-link" type="button" onClick={() => openSourceFile(analysis.fileId)}>{safeFileName(analysis.fileName)}</button><p>{analysis.detectedDocumentType} · 自动归档到 {analysis.targetStep}</p></div><div className="parsed-card-actions"><StatusBadge status={analysis.extractedFields.length > 0 ? 'pass' : 'warn'} /><button className="withdraw-btn" type="button" onClick={() => onWithdraw(analysis.fileId)} title="撤回该文件"><Undo2 size={13} />撤回</button></div></div>
             <div className="parsed-metrics"><span>文本 {analysis.textLength} 字</span><span>字段 {analysis.extractedFields.length} 个</span><span>校验 {analysis.policyChecks.length} 条</span><span>{analysis.aiAdvice.provider} · {analysis.aiAdvice.model}</span></div>
             <p className="ai-summary"><Bot size={15} />{analysis.aiAdvice.summary}</p>
             <AiAdvicePanel advice={analysis.aiAdvice} />
@@ -1224,6 +1224,11 @@ function groupMatchedFields(value: string) {
 
 function formatStandardContent(value: string) {
   return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).join('\n');
+}
+
+function safeFileName(name: string): string {
+  if (!name || name.includes('�')) return '[文件名无法显示，请重新上传]';
+  return name;
 }
 
 function statusIcon(status: string) {

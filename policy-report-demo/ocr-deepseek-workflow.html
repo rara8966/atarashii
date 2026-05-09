@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OCR + DeepSeek 审查工作流</title>
+  <style>
+    :root {
+      --ink: #122033;
+      --muted: #637083;
+      --line: #dbe3ee;
+      --paper: #f7f9fc;
+      --panel: #ffffff;
+      --blue: #2267d8;
+      --cyan: #0d8ea5;
+      --green: #178a55;
+      --amber: #b7791f;
+      --rose: #c2415a;
+      --slate: #4b5f7a;
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+
+    .page {
+      width: min(1180px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 28px 0 36px;
+    }
+
+    .hero {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 14px 32px rgba(18, 32, 51, 0.07);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--blue);
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 860px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fbfdff;
+      min-height: 86px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .section-title {
+      margin: 26px 0 12px;
+      font-size: 20px;
+    }
+
+    .workflow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .lane {
+      position: relative;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      min-height: 280px;
+    }
+
+    .lane:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      right: -16px;
+      top: 46px;
+      width: 18px;
+      height: 18px;
+      color: var(--slate);
+      font-weight: 800;
+      font-size: 18px;
+      z-index: 2;
+    }
+
+    .lane h2 {
+      margin: 0 0 12px;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      flex: 0 0 24px;
+    }
+
+    .tag.blue { background: var(--blue); }
+    .tag.cyan { background: var(--cyan); }
+    .tag.green { background: var(--green); }
+    .tag.amber { background: var(--amber); }
+    .tag.rose { background: var(--rose); }
+
+    .step {
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--slate);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: #fff;
+      min-height: 88px;
+    }
+
+    .step.blue { border-left-color: var(--blue); }
+    .step.cyan { border-left-color: var(--cyan); }
+    .step.green { border-left-color: var(--green); }
+    .step.amber { border-left-color: var(--amber); }
+    .step.rose { border-left-color: var(--rose); }
+
+    .step strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    .step p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+    }
+
+    .panel h3 {
+      margin: 0 0 12px;
+      font-size: 17px;
+    }
+
+    .checks {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .checks li {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 12px;
+      padding: 10px 0;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .checks li:first-child { border-top: 0; }
+
+    .checks b {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .note {
+      margin-top: 14px;
+      border: 1px solid #bdd7ff;
+      background: #eef6ff;
+      color: #1b4f91;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 14px;
+    }
+
+    .rail {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .rail div {
+      min-height: 72px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fff;
+    }
+
+    .rail b { display: block; margin-bottom: 4px; }
+    .rail span { color: var(--muted); font-size: 13px; }
+
+    @media (max-width: 980px) {
+      .workflow, .metrics, .split, .rail { grid-template-columns: 1fr; }
+      .lane:not(:last-child)::after { display: none; }
+      .page { width: min(100vw - 24px, 760px); }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">OCR + DeepSeek 审查链路</div>
+      <h1>建设用地报批材料智能解析工作流</h1>
+      <p class="lead">上传 PDF、Word、图片或扫描件后，系统先做结构化解析和 OCR，再隔离标准库文件，最后把全文分块交给 DeepSeek 输出可审查、可追溯的五段式意见。</p>
+      <div class="metrics">
+        <div class="metric"><strong>Tesseract</strong><span>中文 OCR 引擎，chi_sim+eng，优先识别扫描件</span></div>
+        <div class="metric"><strong>DeepSeek</strong><span>运行时传入 API Key，生成完整审查意见</span></div>
+        <div class="metric"><strong>300MB</strong><span>后端上传上限已覆盖大体量土地标准 PDF</span></div>
+        <div class="metric"><strong>标准隔离</strong><span>标准库文件不再写入项目事实字段</span></div>
+      </div>
+    </section>
+
+    <h2 class="section-title">主流程</h2>
+    <section class="workflow" aria-label="OCR 与 DeepSeek 工作流图">
+      <article class="lane">
+        <h2><span class="tag blue">1</span>材料输入</h2>
+        <div class="step blue"><strong>项目工作台上传</strong><p>支持 PDF、DOCX、TXT、PNG、JPG，可一把导入八步材料。</p></div>
+        <div class="step blue"><strong>政策明白卡</strong><p>作为审查规则和 AI 提示上下文，和项目材料分开管理。</p></div>
+      </article>
+
+      <article class="lane">
+        <h2><span class="tag cyan">2</span>基础解析</h2>
+        <div class="step cyan"><strong>Tika 文本抽取</strong><p>优先读取 Word、可复制 PDF、文本文件中的原始内容。</p></div>
+        <div class="step cyan"><strong>类型识别</strong><p>判断是项目材料、土地标准库、扫描图片还是疑似扫描 PDF。</p></div>
+      </article>
+
+      <article class="lane">
+        <h2><span class="tag green">3</span>OCR 分支</h2>
+        <div class="step green"><strong>Tesseract 优先</strong><p>对图片和扫描 PDF 页面执行 chi_sim+eng OCR。</p></div>
+        <div class="step green"><strong>视觉模型兜底</strong><p>当 Tesseract 无可信文本时，再走本地视觉模型补识别。</p></div>
+        <div class="step green"><strong>质量闸口</strong><p>噪声太多或文本太短时拒绝污染后续审查。</p></div>
+      </article>
+
+      <article class="lane">
+        <h2><span class="tag amber">4</span>审查加工</h2>
+        <div class="step amber"><strong>字段抽取</strong><p>提取申报面积、供地方式等项目事实字段。</p></div>
+        <div class="step amber"><strong>标准库隔离</strong><p>土地标准文件只进入标准匹配和 AI 审查，不写项目事实字段。</p></div>
+        <div class="step amber"><strong>全文分块</strong><p>长文本按配置分块，避免只看前几千字。</p></div>
+      </article>
+
+      <article class="lane">
+        <h2><span class="tag rose">5</span>结果输出</h2>
+        <div class="step rose"><strong>DeepSeek 审查</strong><p>输出材料摘要、识别字段、需要改、可补充、风险提醒。</p></div>
+        <div class="step rose"><strong>前端解析卡片</strong><p>展示文本长度、字段数、校验项、AI 完整意见。</p></div>
+        <div class="step rose"><strong>报告草稿</strong><p>已解析材料可继续进入八步审查报告预览和导出。</p></div>
+      </article>
+    </section>
+
+    <section class="split">
+      <article class="panel">
+        <h3>本轮验证结果</h3>
+        <ul class="checks">
+          <li><b>OCR 图片</b><span>生成扫描图识别 62 字，抽出“申报面积 12.3 公顷”和“供地方式 划拨”。</span></li>
+          <li><b>DeepSeek</b><span>同一 OCR 文本进入 DeepSeek，前端展示完整五段式审查意见。</span></li>
+          <li><b>风电 DOCX</b><span>真实《电力工程项目建设用地指标（风电场）》识别为标准库文件，字段数保持 0。</span></li>
+          <li><b>大 PDF</b><span>59.2MB 标准汇编 PDF 触发扫描 OCR，90.5MB 上册 PDF 上传和 Tika 路径通过。</span></li>
+        </ul>
+      </article>
+
+      <article class="panel">
+        <h3>关键保护点</h3>
+        <ul class="checks">
+          <li><b>API Key</b><span>DeepSeek Key 仅由运行时请求传入，不写入代码和配置文件。</span></li>
+          <li><b>标准文件</b><span>标准条文用于比对和风险提醒，不覆盖项目名称、面积、供地方式等事实字段。</span></li>
+          <li><b>OCR 噪声</b><span>识别文本会先过质量判断，低可信结果只提示，不进入事实抽取。</span></li>
+          <li><b>可调页数</b><span>扫描 PDF OCR 页数由 app.ocr-max-pages 控制，演示时可低页数快速验证。</span></li>
+        </ul>
+      </article>
+    </section>
+
+    <h2 class="section-title">接口与配置路径</h2>
+    <section class="panel">
+      <div class="rail">
+        <div><b>上传接口</b><span>POST /api/documents/analyze</span></div>
+        <div><b>OCR 配置</b><span>app.ocr-engine, app.ocr-tesseract-command, app.ocr-tesseract-language</span></div>
+        <div><b>AI 配置</b><span>aiProvider=deepseek, deepseekModel=deepseek-chat</span></div>
+        <div><b>前端入口</b><span>Step 6 土地利用：解析卡片和 AI 完整审查意见</span></div>
+      </div>
+      <p class="note">演示推荐顺序：先上传标准库 DOCX 看“字段 0 个”和风险提醒，再上传扫描图看 Tesseract OCR 字段抽取，最后预览审查报告。</p>
+    </section>
+  </main>
+</body>
+</html>
