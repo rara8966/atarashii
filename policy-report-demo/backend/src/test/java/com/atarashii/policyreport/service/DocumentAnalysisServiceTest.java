@@ -6,7 +6,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class DocumentAnalysisServiceTest {
-    private final DocumentAnalysisService service = new DocumentAnalysisService(null, null, null, null, null, null, null, null);
+    private final DocumentAnalysisService service = new DocumentAnalysisService(null, null, null, null, null, null, null, null, null);
 
     @Test
     void recognizesCustomerNamedMaterials() {

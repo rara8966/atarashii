@@ -35,6 +35,24 @@ public class OcrService {
         this.ollamaClient = ollamaClient;
     }
 
+    public String generateFileThumbnail(Path path, String fileName, String contentType) {
+        try {
+            if (isPdf(fileName, contentType)) {
+                try (PDDocument document = PDDocument.load(path.toFile(), MemoryUsageSetting.setupTempFileOnly())) {
+                    if (document.getNumberOfPages() == 0) return null;
+                    PDFRenderer renderer = new PDFRenderer(document);
+                    BufferedImage image = renderer.renderImageWithDPI(0, 96, ImageType.RGB);
+                    return generateThumbnail(image);
+                }
+            }
+            if (isImage(fileName, contentType)) {
+                BufferedImage image = ImageIO.read(path.toFile());
+                return image != null ? generateThumbnail(image) : null;
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
     public OcrResult analyze(Path path, String fileName, String contentType, String tikaText) {
         if (!properties.isOcrEnabled()) {
             return OcrResult.notNeeded();
@@ -56,8 +74,12 @@ public class OcrService {
             StringBuilder text = new StringBuilder();
             int acceptedPages = 0;
             Set<String> providers = new LinkedHashSet<>();
+            String thumbnail = null;
             for (int index = 0; index < pages; index++) {
                 BufferedImage image = renderer.renderImageWithDPI(index, Math.max(96, properties.getOcrDpi()), ImageType.RGB);
+                if (index == 0) {
+                    thumbnail = generateThumbnail(image);
+                }
                 Path pageImage = writeTempPng(image, "ocr-page-" + (index + 1));
                 OcrTextResult result = generateOcrText(pageImage, ocrPrompt(index + 1, totalPages), toBase64Png(image));
                 deleteQuietly(pageImage);
@@ -65,7 +87,7 @@ public class OcrService {
                     String detail = text.isEmpty()
                             ? "扫描件疑似需要 OCR，但本地视觉模型未返回有效结果：" + result.rawText()
                             : "扫描件 OCR 已完成前 " + index + " 页，后续页面失败：" + result.rawText();
-                    return new OcrResult(true, !text.isEmpty(), !text.isEmpty() ? "warn" : "warn", "OCR扫描件识别", detail, text.toString().trim(), result.model(), index, totalPages);
+                    return new OcrResult(true, !text.isEmpty(), !text.isEmpty() ? "warn" : "warn", "OCR扫描件识别", detail, text.toString().trim(), result.model(), index, totalPages, thumbnail);
                 }
                 if (result.useful()) {
                     acceptedPages++;
@@ -74,15 +96,15 @@ public class OcrService {
                 }
             }
             if (text.isEmpty()) {
-                return new OcrResult(true, false, "warn", "OCR扫描件识别", "本地视觉模型已尝试 OCR，但未得到可信文字，未并入材料文本。", "", "ollama-vision", pages, totalPages);
+                return new OcrResult(true, false, "warn", "OCR扫描件识别", "本地视觉模型已尝试 OCR，但未得到可信文字，未并入材料文本。", "", "ollama-vision", pages, totalPages, thumbnail);
             }
             String provider = providers.isEmpty() ? "ocr" : String.join("/", providers);
             String detail = totalPages > pages
                     ? "疑似扫描 PDF，已用 " + provider + " OCR 前 " + pages + "/" + totalPages + " 页，其中 " + acceptedPages + " 页得到可信文字；后续页数可调高 app.ocr-max-pages 后继续。"
                     : "疑似扫描 PDF，已用 " + provider + " 完成 " + pages + " 页 OCR，其中 " + acceptedPages + " 页得到可信文字。";
-            return new OcrResult(true, !text.isEmpty(), "pass", "OCR扫描件识别", detail, text.toString().trim(), provider, pages, totalPages);
+            return new OcrResult(true, !text.isEmpty(), "pass", "OCR扫描件识别", detail, text.toString().trim(), provider, pages, totalPages, thumbnail);
         } catch (Exception ex) {
-            return new OcrResult(true, false, "warn", "OCR扫描件识别", "扫描 PDF OCR 失败：" + ex.getMessage(), "", "ocr", 0, 0);
+            return new OcrResult(true, false, "warn", "OCR扫描件识别", "扫描 PDF OCR 失败：" + ex.getMessage(), "", "ocr", 0, 0, null);
         }
     }
 
@@ -90,16 +112,21 @@ public class OcrService {
         try {
             byte[] bytes = Files.readAllBytes(path);
             String base64 = Base64.getEncoder().encodeToString(bytes);
+            String thumbnail = null;
+            try {
+                BufferedImage img = ImageIO.read(path.toFile());
+                if (img != null) thumbnail = generateThumbnail(img);
+            } catch (Exception ignored) {}
             OcrTextResult result = generateOcrText(path, ocrPrompt(1, 1), base64);
             if (!result.available()) {
-                return new OcrResult(true, false, "warn", "OCR图片识别", title + "需要 OCR，但本地视觉模型未返回有效结果：" + result.rawText(), "", result.model(), 0, 1);
+                return new OcrResult(true, false, "warn", "OCR图片识别", title + "需要 OCR，但本地视觉模型未返回有效结果：" + result.rawText(), "", result.model(), 0, 1, thumbnail);
             }
             if (!result.useful()) {
-                return new OcrResult(true, false, "warn", "OCR图片识别", title + "已尝试 OCR，但结果不像可信文字，未并入材料文本。", "", result.model(), 1, 1);
+                return new OcrResult(true, false, "warn", "OCR图片识别", title + "已尝试 OCR，但结果不像可信文字，未并入材料文本。", "", result.model(), 1, 1, thumbnail);
             }
-            return new OcrResult(true, true, "pass", "OCR图片识别", title + "已用 " + result.model() + " OCR。", result.text(), result.model(), 1, 1);
+            return new OcrResult(true, true, "pass", "OCR图片识别", title + "已用 " + result.model() + " OCR。", result.text(), result.model(), 1, 1, thumbnail);
         } catch (Exception ex) {
-            return new OcrResult(true, false, "warn", "OCR图片识别", title + " OCR 失败：" + ex.getMessage(), "", "ocr", 0, 1);
+            return new OcrResult(true, false, "warn", "OCR图片识别", title + " OCR 失败：" + ex.getMessage(), "", "ocr", 0, 1, null);
         }
     }
 
@@ -163,7 +190,12 @@ public class OcrService {
         String engine = properties.getOcrEngine() == null ? "auto" : properties.getOcrEngine().toLowerCase(Locale.ROOT);
         if (!"vision".equals(engine)) {
             OcrTextResult tesseract = runTesseract(imagePath);
-            if (tesseract.useful() || "tesseract".equals(engine)) {
+            if ("tesseract".equals(engine)) return tesseract;
+            // Auto mode: only trust Tesseract when it extracts substantial text.
+            // Maps and photos often satisfy isUsefulOcrText() with just a few legend
+            // labels (e.g. "建设用地"), but the real content needs vision.
+            int tesseractCjk = countCjk((tesseract.text() == null ? "" : tesseract.text()).replaceAll("\\s+", ""));
+            if (tesseract.useful() && tesseractCjk >= 150) {
                 return tesseract;
             }
         }
@@ -239,6 +271,27 @@ public class OcrService {
         }
     }
 
+    private String generateThumbnail(BufferedImage source) {
+        try {
+            int srcW = source.getWidth();
+            int srcH = source.getHeight();
+            int thumbW = Math.min(600, srcW);
+            int thumbH = srcW == 0 ? 0 : (int) ((long) thumbW * srcH / srcW);
+            if (thumbW <= 0 || thumbH <= 0) return null;
+            BufferedImage thumb = new BufferedImage(thumbW, thumbH, BufferedImage.TYPE_INT_RGB);
+            java.awt.Graphics2D g = thumb.createGraphics();
+            g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g.drawImage(source, 0, 0, thumbW, thumbH, null);
+            g.dispose();
+            try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                ImageIO.write(thumb, "jpg", out);
+                return Base64.getEncoder().encodeToString(out.toByteArray());
+            }
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
     private Path writeTempPng(BufferedImage image, String prefix) throws Exception {
         Path workDir = Path.of("data", "ocr-work").toAbsolutePath();
         Files.createDirectories(workDir);
@@ -271,9 +324,11 @@ public class OcrService {
     }
 
     private String ocrPrompt(int page, int totalPages) {
-        return "你是建设用地报批材料 OCR 引擎。请只转写图片中的中文、数字、表格、标题和印章附近可读文字。"
-                + "保留原始顺序，表格尽量按行输出；看不清的位置写[不清晰]；不要解释，不要总结。"
-                + "当前页: " + page + "/" + totalPages;
+        return "你是建设用地报批材料解析引擎，请根据图片类型处理：\n"
+                + "• 文字/表格页：逐字转写所有中文、数字、标题、印章文字，表格按行输出\n"
+                + "• 地图/图件：列出图名、坐标系、图例中的用地类型及颜色对应、图中标注的面积或范围数据\n"
+                + "• 照片：描述照片主体内容，并转写照片中任何可见的文字（公告、标牌、文件等）\n"
+                + "看不清的写[不清晰]，不要总结。当前页: " + page + "/" + totalPages;
     }
 
     private String toBase64Png(BufferedImage image) throws Exception {
@@ -292,10 +347,11 @@ public class OcrService {
             String text,
             String provider,
             int pagesProcessed,
-            int totalPages
+            int totalPages,
+            String thumbnailBase64
     ) {
         static OcrResult notNeeded() {
-            return new OcrResult(false, false, "info", "", "", "", "", 0, 0);
+            return new OcrResult(false, false, "info", "", "", "", "", 0, 0, null);
         }
     }
 }

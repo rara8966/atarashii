@@ -59,7 +59,10 @@ public final class DemoModels {
             int textLength,
             List<ExtractedField> extractedFields,
             List<PolicyCheck> policyChecks,
-            AiAdvice aiAdvice
+            AiAdvice aiAdvice,
+            boolean visualContent,
+            String thumbnailBase64,
+            String doubaoAnalysis
     ) {
     }
 
@@ -72,7 +75,7 @@ public final class DemoModels {
     public record OllamaStatus(boolean reachable, String defaultModel, String fallbackModel, List<String> installedModels) {
     }
 
-    public record AiConfig(String provider, String deepseekApiKey, String deepseekModel) {
+    public record AiConfig(String provider, String deepseekApiKey, String deepseekModel, String doubaoApiKey, String doubaoEndpoint) {
     }
 
     public record EditableField(
@@ -147,6 +150,12 @@ public final class DemoModels {
             String content,
             String keywords
     ) {
+    }
+
+    public record SynthesizeRequest(List<DocumentAnalysisResponse> analyses, String aiProvider, String deepseekApiKey, String deepseekModel) {
+    }
+
+    public record SynthesizeResponse(String summary, String rawText, String provider) {
     }
 
     public record LandUseStandardMatchDto(

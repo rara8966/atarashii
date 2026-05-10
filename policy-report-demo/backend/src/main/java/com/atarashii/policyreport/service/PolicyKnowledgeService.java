@@ -1,6 +1,7 @@
 package com.atarashii.policyreport.service;
 
 import com.atarashii.policyreport.config.AppProperties;
+import com.atarashii.policyreport.model.DemoModels.LandUseStandardDto;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
 
@@ -17,19 +18,31 @@ public class PolicyKnowledgeService {
 
     private final AppProperties properties;
     private final TikaDocumentParser parser;
+    private final LandUseStandardService landUseStandardService;
     private final Path persistedPolicyCard = Path.of("data", "policy-card.txt");
     private String policyCardText;
 
-    public PolicyKnowledgeService(AppProperties properties, TikaDocumentParser parser) {
+    public PolicyKnowledgeService(AppProperties properties, TikaDocumentParser parser, LandUseStandardService landUseStandardService) {
         this.properties = properties;
         this.parser = parser;
+        this.landUseStandardService = landUseStandardService;
     }
 
     public String buildKnowledgeFor(String targetStep, String documentText) {
+        return buildKnowledgeFor(targetStep, documentText, null);
+    }
+
+    public String buildKnowledgeFor(String targetStep, String documentText, String projectType) {
         List<String> snippets = new ArrayList<>();
         snippets.add("明白卡核心口径: 先看项目类型、选址合规、预审有效性、农转用与征收材料是否齐全、计划指标和补充耕地是否落实。");
         snippets.add("1009号模板核心口径: 审查报告按八段写清项目基本情况、申请用地现状、农用地转用、补充耕地、土地征收、土地利用、地灾压矿、信访违法处理；每段都要有材料依据和明确结论。");
         snippets.add(snippet(loadPolicyCardText(), targetStep, documentText));
+        if (projectType != null && !projectType.isBlank() && !"general".equals(projectType)) {
+            String standardSnippet = buildStandardKnowledge(projectType, targetStep);
+            if (!standardSnippet.isBlank()) {
+                snippets.add(standardSnippet);
+            }
+        }
         return String.join("\n", snippets);
     }
 
@@ -47,6 +60,19 @@ public class PolicyKnowledgeService {
         } catch (Exception ignored) {
         }
         return parsed;
+    }
+
+    private String buildStandardKnowledge(String projectType, String targetStep) {
+        List<LandUseStandardDto> chunks = landUseStandardService.search(projectType, "", 6);
+        if (chunks.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder("【内置用地指标标准（").append(projectType).append("）】\n");
+        sb.append("以下为系统内置该项目类型的建设用地指标条文，作为第六步用地标准核对的基准依据：\n");
+        for (LandUseStandardDto chunk : chunks) {
+            sb.append("▶ ").append(chunk.chapterTitle()).append("\n");
+            String content = chunk.content();
+            sb.append(content, 0, Math.min(content.length(), 500)).append("\n\n");
+        }
+        return sb.toString().trim();
     }
 
     private String loadPolicyCardText() {

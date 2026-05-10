@@ -6,6 +6,7 @@ import com.atarashii.policyreport.model.DemoModels.AiConfig;
 import com.atarashii.policyreport.model.DemoModels.DocumentAnalysisResponse;
 import com.atarashii.policyreport.model.DemoModels.ExtractedField;
 import com.atarashii.policyreport.model.DemoModels.PolicyCheck;
+import com.atarashii.policyreport.model.DemoModels.SynthesizeResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,6 +19,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class DocumentAnalysisService {
@@ -25,6 +27,7 @@ public class DocumentAnalysisService {
     private final PolicyKnowledgeService policyKnowledgeService;
     private final OllamaClient ollamaClient;
     private final DeepSeekClient deepSeekClient;
+    private final DoubaoClient doubaoClient;
     private final OcrService ocrService;
     private final WorkspaceStateService workspaceStateService;
     private final UploadedFileService uploadedFileService;
@@ -34,6 +37,7 @@ public class DocumentAnalysisService {
                                    PolicyKnowledgeService policyKnowledgeService,
                                    OllamaClient ollamaClient,
                                    DeepSeekClient deepSeekClient,
+                                   DoubaoClient doubaoClient,
                                    OcrService ocrService,
                                    WorkspaceStateService workspaceStateService,
                                    UploadedFileService uploadedFileService,
@@ -42,6 +46,7 @@ public class DocumentAnalysisService {
         this.policyKnowledgeService = policyKnowledgeService;
         this.ollamaClient = ollamaClient;
         this.deepSeekClient = deepSeekClient;
+        this.doubaoClient = doubaoClient;
         this.ocrService = ocrService;
         this.workspaceStateService = workspaceStateService;
         this.uploadedFileService = uploadedFileService;
@@ -56,14 +61,73 @@ public class DocumentAnalysisService {
         TikaDocumentParser.ParsedDocument parsed = parser.parse(file);
         String fileId = uploadedFileService.store(file);
         String tikaText = normalize(parsed.text());
-        OcrService.OcrResult ocrResult = ocrService.analyze(uploadedFileService.path(fileId), parsed.fileName(), parsed.contentType(), tikaText);
-        String text = mergeOcrText(tikaText, ocrResult);
+        boolean doubaoConfigured = aiConfig != null
+                && aiConfig.doubaoApiKey() != null && !aiConfig.doubaoApiKey().isBlank()
+                && aiConfig.doubaoEndpoint() != null && !aiConfig.doubaoEndpoint().isBlank();
+
+        // Round 1 — Doubao: generate thumbnail for every file, then classify & extract
+        String thumbnailBase64 = null;
+        String doubaoAnalysis = null;
+        String doubaoExtractedText = null;
+        boolean usedDoubaoForExtraction = false;
+
+        if (doubaoConfigured) {
+            thumbnailBase64 = ocrService.generateFileThumbnail(
+                    uploadedFileService.path(fileId), parsed.fileName(), parsed.contentType());
+            if (thumbnailBase64 != null) {
+                boolean textPoor = tikaText.length() < 100;
+                String prompt = textPoor ? doubaoTextExtractionPrompt() : doubaoImagePrompt();
+                DoubaoClient.GenerationResult doubaoResult = doubaoClient.analyzeImage(
+                        aiConfig.doubaoEndpoint(), aiConfig.doubaoApiKey(), thumbnailBase64, prompt);
+                if (doubaoResult.usedModel()) {
+                    doubaoAnalysis = doubaoResult.text();
+                    if (textPoor) {
+                        doubaoExtractedText = doubaoResult.text();
+                        usedDoubaoForExtraction = true;
+                    }
+                }
+            }
+        }
+
+        // OCR fallback: run when Doubao not configured, thumbnail unavailable, or extraction failed
+        boolean skipOcr = doubaoConfigured && thumbnailBase64 != null
+                && (!usedDoubaoForExtraction || doubaoExtractedText != null);
+        OcrService.OcrResult ocrResult = skipOcr
+                ? OcrService.OcrResult.notNeeded()
+                : ocrService.analyze(uploadedFileService.path(fileId), parsed.fileName(), parsed.contentType(), tikaText);
+
+        // If no Doubao thumbnail, fall back to OCR thumbnail
+        if (thumbnailBase64 == null) {
+            thumbnailBase64 = ocrResult.thumbnailBase64();
+        }
+
+        // Round 2 — merge text: Tika + Doubao extraction + OCR
+        String mergedText = tikaText;
+        if (doubaoExtractedText != null && !doubaoExtractedText.isBlank()) {
+            mergedText = tikaText.isBlank()
+                    ? doubaoExtractedText
+                    : tikaText + "\n\n【豆包AI提取文字】\n" + doubaoExtractedText;
+        }
+        String text = mergeOcrText(mergedText, ocrResult);
+
         String documentType = detectDocumentType(parsed.fileName(), text);
         String stepId = resolveStepId(targetStep, guessStep(documentType, parsed.fileName(), text), fallbackStep);
         List<ExtractedField> fields = isStandardLibraryDocument(documentType) ? List.of() : attachSourceFile(extractFields(text), fileId);
         List<PolicyCheck> checks = runPolicyChecks(text, stepId, documentType, fields);
         addOcrCheck(checks, ocrResult);
-        AiAdvice aiAdvice = buildAiAdvice(text, stepId, documentType, checks, fields, aiConfig);
+
+        if (doubaoAnalysis != null && !doubaoAnalysis.isBlank()) {
+            String label = usedDoubaoForExtraction ? "豆包AI文字提取" : "豆包AI视觉分析";
+            String detail = usedDoubaoForExtraction
+                    ? "Tika文本不足100字，已由豆包提取文字并用于字段解析。"
+                    : "已由豆包完成图像/视觉内容分析。";
+            checks.add(new PolicyCheck("pass", label, detail, "doubao"));
+        }
+
+        boolean visualContent = thumbnailBase64 != null;
+        String projectType = workspaceStateService.getProjectType(projectId);
+        AiAdvice aiAdvice = buildAiAdvice(text, stepId, documentType, checks, fields, aiConfig, projectType);
+
         DocumentAnalysisResponse response = new DocumentAnalysisResponse(
                 fileId,
                 parsed.fileName(),
@@ -75,10 +139,13 @@ public class DocumentAnalysisService {
                 text.length(),
                 fields,
                 checks,
-                aiAdvice
+                aiAdvice,
+                visualContent,
+                thumbnailBase64,
+                doubaoAnalysis
         );
-                workspaceStateService.mergeAnalysis(projectId, response);
-            return response;
+        workspaceStateService.mergeAnalysis(projectId, response);
+        return response;
     }
 
     public DocumentAnalysisResponse analyze(MultipartFile file, String targetStep, AiConfig aiConfig) {
@@ -338,6 +405,10 @@ public class DocumentAnalysisService {
     }
 
     private AiAdvice buildAiAdvice(String text, String targetStep, String documentType, List<PolicyCheck> checks, List<ExtractedField> fields, AiConfig aiConfig) {
+        return buildAiAdvice(text, targetStep, documentType, checks, fields, aiConfig, null);
+    }
+
+    private AiAdvice buildAiAdvice(String text, String targetStep, String documentType, List<PolicyCheck> checks, List<ExtractedField> fields, AiConfig aiConfig, String projectType) {
         List<String> editablePoints = new ArrayList<>();
         List<String> missingMaterials = new ArrayList<>();
         List<String> riskPoints = new ArrayList<>();
@@ -364,14 +435,14 @@ public class DocumentAnalysisService {
             return new AiAdvice("rules", "规则初筛", false, "已完成 Tika 解析、字段抽取和政策规则初筛。", editablePoints, missingMaterials, riskPoints, "自动化接口自测使用规则模式，未调用外部大模型。");
         }
         if (aiConfig != null && "deepseek".equalsIgnoreCase(aiConfig.provider()) && aiConfig.deepseekApiKey() != null && !aiConfig.deepseekApiKey().isBlank()) {
-            DeepSeekClient.GenerationResult deepSeek = generateDeepSeekFullText(text, targetStep, documentType, checks, fields, aiConfig);
+            DeepSeekClient.GenerationResult deepSeek = generateDeepSeekFullText(text, targetStep, documentType, checks, fields, aiConfig, projectType);
             if (deepSeek.usedModel()) {
                 String raw = deepSeek.text();
                 return new AiAdvice("deepseek", deepSeek.model(), false, firstLine(raw), editablePoints, missingMaterials, riskPoints, raw);
             }
             riskPoints.add(deepSeek.text());
         }
-        OllamaClient.GenerationResult generation = generateOllamaFullText(text, targetStep, documentType, checks, fields);
+        OllamaClient.GenerationResult generation = generateOllamaFullText(text, targetStep, documentType, checks, fields, projectType);
         if (generation.usedOllama()) {
             String raw = generation.text();
             return new AiAdvice("ollama", generation.model(), true, firstLine(raw), editablePoints, missingMaterials, riskPoints, raw);
@@ -379,8 +450,8 @@ public class DocumentAnalysisService {
         return new AiAdvice("rules", generation.model(), false, "已完成规则初筛；大模型未返回有效结果，页面展示内置建议。", editablePoints, missingMaterials, riskPoints, generation.text());
     }
 
-    private String buildPrompt(String text, String targetStep, String documentType, List<PolicyCheck> checks, List<ExtractedField> fields) {
-        String knowledge = policyKnowledgeService.buildKnowledgeFor(targetStep, text);
+    private String buildPrompt(String text, String targetStep, String documentType, List<PolicyCheck> checks, List<ExtractedField> fields, String projectType) {
+        String knowledge = policyKnowledgeService.buildKnowledgeFor(targetStep, text, projectType);
         return "你是建设用地报批审查报告主审 AI，不是摘要工具。请基于政策明白卡、1009号模板、规则初筛和上传材料全文，完成本步骤审查。\n"
                 + "要求: 用中文输出，面向项目经理和客户；规则没覆盖的也要根据材料语义判断。分成五段: 1材料摘要 2AI识别字段 3需要改 4可补充 5风险提醒。\n"
                 + "请明确哪些结论来自材料原文，哪些只是推断；如果材料其实是标准库/规范文件，不要把标准条文误当成项目事实。\n"
@@ -392,10 +463,10 @@ public class DocumentAnalysisService {
                 + "上传材料文本:\n" + text;
     }
 
-    private DeepSeekClient.GenerationResult generateDeepSeekFullText(String text, String targetStep, String documentType, List<PolicyCheck> checks, List<ExtractedField> fields, AiConfig aiConfig) {
+    private DeepSeekClient.GenerationResult generateDeepSeekFullText(String text, String targetStep, String documentType, List<PolicyCheck> checks, List<ExtractedField> fields, AiConfig aiConfig, String projectType) {
         TextChunks chunks = splitForAi(text);
         if (chunks.parts().size() == 1) {
-            return deepSeekClient.generate(buildPrompt(text, targetStep, documentType, checks, fields), aiConfig.deepseekApiKey(), aiConfig.deepseekModel());
+            return deepSeekClient.generate(buildPrompt(text, targetStep, documentType, checks, fields, projectType), aiConfig.deepseekApiKey(), aiConfig.deepseekModel());
         }
         List<String> chunkReviews = new ArrayList<>();
         String model = aiConfig.deepseekModel() == null || aiConfig.deepseekModel().isBlank() ? "deepseek-chat" : aiConfig.deepseekModel();
@@ -412,10 +483,10 @@ public class DocumentAnalysisService {
         return new DeepSeekClient.GenerationResult(true, model, aiHeader(chunks) + String.join("\n\n", chunkReviews) + "\n\n最终汇总调用失败：" + finalResult.text());
     }
 
-    private OllamaClient.GenerationResult generateOllamaFullText(String text, String targetStep, String documentType, List<PolicyCheck> checks, List<ExtractedField> fields) {
+    private OllamaClient.GenerationResult generateOllamaFullText(String text, String targetStep, String documentType, List<PolicyCheck> checks, List<ExtractedField> fields, String projectType) {
         TextChunks chunks = splitForAi(text);
         if (chunks.parts().size() == 1) {
-            return ollamaClient.generate(buildPrompt(text, targetStep, documentType, checks, fields));
+            return ollamaClient.generate(buildPrompt(text, targetStep, documentType, checks, fields, projectType));
         }
         List<String> chunkReviews = new ArrayList<>();
         String model = "";
@@ -474,6 +545,75 @@ public class DocumentAnalysisService {
     private String aiHeader(TextChunks chunks) {
         String clipped = chunks.truncated() ? "，已达到当前分块上限，仍有后续文本未送入AI" : "，未截断";
         return "AI全文分块审查：已送入 " + chunks.sentLength() + "/" + chunks.originalLength() + " 字，共 " + chunks.parts().size() + " 个分块" + clipped + "。\n\n";
+    }
+
+    private String doubaoTextExtractionPrompt() {
+        return "你是建设用地报批材料文字提取引擎。请对图片内容进行文字识别：\n"
+                + "• 文字/表格/公文：逐字转写所有中文、数字、标题、印章，表格按行输出\n"
+                + "• 扫描件/歪斜模糊：尽力识别所有可见文字，即使模糊也请转写\n"
+                + "• 工程图/流程图：转写所有标注文字、数据、图名、图例\n"
+                + "输出限400字，看不清的写[不清晰]，直接输出识别到的文字，不要总结。";
+    }
+
+    private String doubaoImagePrompt() {
+        return "你是建设用地报批材料解析引擎。请识别图片类型并处理：\n"
+                + "• 文字/表格页：逐字转写所有中文、数字、标题、印章，表格按行输出\n"
+                + "• 地图/图件：给出图名、坐标系、图例用地类型及颜色对应、标注的面积数据\n"
+                + "• 照片：描述主体内容，转写可见文字（公告牌、标牌、文件等）\n"
+                + "输出限300字，看不清写[不清晰]，不要总结。";
+    }
+
+    public SynthesizeResponse synthesize(List<DocumentAnalysisResponse> analyses, AiConfig aiConfig) {
+        List<String> visualParts = new ArrayList<>();
+        List<String> fieldParts = new ArrayList<>();
+        for (DocumentAnalysisResponse analysis : analyses) {
+            if (analysis.doubaoAnalysis() != null && !analysis.doubaoAnalysis().isBlank()) {
+                visualParts.add("【" + analysis.fileName() + "】\n" + analysis.doubaoAnalysis());
+            }
+            if (!analysis.extractedFields().isEmpty()) {
+                String fields = analysis.extractedFields().stream()
+                        .map(f -> f.label() + ": " + f.value())
+                        .collect(Collectors.joining("，"));
+                fieldParts.add("【" + analysis.fileName() + "】" + fields);
+            }
+        }
+        if (visualParts.isEmpty() && fieldParts.isEmpty()) {
+            return new SynthesizeResponse("暂无视觉分析结果或字段数据，无法综合分析。", "", "none");
+        }
+        String prompt = buildSynthesizePrompt(visualParts, fieldParts);
+        if (aiConfig != null && "deepseek".equalsIgnoreCase(aiConfig.provider())
+                && aiConfig.deepseekApiKey() != null && !aiConfig.deepseekApiKey().isBlank()) {
+            DeepSeekClient.GenerationResult result = deepSeekClient.generate(prompt, aiConfig.deepseekApiKey(), aiConfig.deepseekModel());
+            if (result.usedModel()) {
+                return new SynthesizeResponse(firstLine(result.text()), result.text(), "deepseek/" + result.model());
+            }
+        }
+        OllamaClient.GenerationResult result = ollamaClient.generate(prompt);
+        if (result.usedOllama()) {
+            return new SynthesizeResponse(firstLine(result.text()), result.text(), "ollama/" + result.model());
+        }
+        return new SynthesizeResponse("大模型未返回结果，请检查AI配置。", result.text(), "none");
+    }
+
+    private String buildSynthesizePrompt(List<String> visualParts, List<String> fieldParts) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("你是建设用地报批审查报告主审 AI。以下是本次上传材料的综合分析数据，请输出：\n");
+        sb.append("1. 关键字段建议值（格式：字段名: 建议值  来源: xxx）\n");
+        sb.append("2. 情形选择建议（格式：步骤X·情形组: 情形X — 理由）\n");
+        sb.append("3. 整体材料摘要（不超过200字）\n\n");
+        if (!visualParts.isEmpty()) {
+            sb.append("=== 豆包AI视觉分析（地图/照片/图件）===\n");
+            for (String part : visualParts) {
+                sb.append(part).append("\n\n");
+            }
+        }
+        if (!fieldParts.isEmpty()) {
+            sb.append("=== 文字材料抽取字段 ===\n");
+            for (String part : fieldParts) {
+                sb.append(part).append("\n");
+            }
+        }
+        return sb.toString();
     }
 
     private void addOcrCheck(List<PolicyCheck> checks, OcrService.OcrResult result) {

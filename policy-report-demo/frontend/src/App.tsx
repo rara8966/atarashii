@@ -34,6 +34,7 @@ import {
   generateReport,
   refreshStandardMatches,
   sourceFileUrl,
+  synthesizeAnalyses,
   updateField,
   updateSituation,
   withdrawDocument,
@@ -52,6 +53,7 @@ import type {
   ProjectRecord,
   ReportResponse,
   StepWorkspace,
+  SynthesizeResponse,
   WorkspaceState
 } from './types';
 
@@ -227,6 +229,7 @@ function App() {
   const [notice, setNotice] = useState('');
   const [dragTarget, setDragTarget] = useState('');
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; fileName: string } | null>(null);
+  const [synthesisResult, setSynthesisResult] = useState<SynthesizeResponse | null>(null);
   const [aiConfig, setAiConfig] = useState<AiConfig>(() => readAiConfig());
   const policyInputRef = useRef<HTMLInputElement | null>(null);
   const bulkInputRef = useRef<HTMLInputElement | null>(null);
@@ -363,7 +366,11 @@ function App() {
 
   function saveAiConfig() {
     localStorage.setItem(AI_CONFIG_KEY, JSON.stringify(aiConfig));
-    setNotice(aiConfig.provider === 'deepseek' ? 'DeepSeek 配置已保存到本机浏览器。' : '已切换为本机 Ollama。');
+    const parts: string[] = [];
+    if (aiConfig.provider === 'deepseek') parts.push('DeepSeek');
+    else if (aiConfig.provider === 'ollama') parts.push('Ollama');
+    if (aiConfig.doubaoApiKey?.trim()) parts.push('豆包视觉');
+    setNotice((parts.join(' + ') || 'AI') + ' 配置已保存到本机浏览器。');
   }
 
   async function handlePolicyCard(files: FileList | File[]) {
@@ -421,6 +428,16 @@ function App() {
       if (failed.length > 0 && valid.length === 0) setError(summary); else setNotice(summary);
       const firstStep = valid.find((r) => r.targetStep)?.targetStep;
       if (firstStep) setSelectedStep(firstStep);
+      const hasVisual = valid.some((r) => r.visualContent);
+      const hasText = valid.some((r) => !r.visualContent && r.extractedFields.length > 0);
+      if (valid.length > 0 && (hasVisual || hasText)) {
+        try {
+          const synthesis = await synthesizeAnalyses(valid, aiConfig);
+          setSynthesisResult(synthesis);
+        } catch {
+          // 综合分析失败不阻断主流程
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '批量解析失败');
     } finally {
@@ -576,12 +593,17 @@ function App() {
           <section className="card ai-card">
             <div className="card-header"><KeyRound size={17} />AI 配置</div>
             <div className="card-body compact-body">
+              <div className="ai-config-label">文字分析模型</div>
               <div className="segmented">
                 <button className={aiConfig.provider === 'deepseek' ? 'active' : ''} type="button" onClick={() => setAiConfig({ ...aiConfig, provider: 'deepseek' })}>DeepSeek</button>
                 <button className={aiConfig.provider === 'ollama' ? 'active' : ''} type="button" onClick={() => setAiConfig({ ...aiConfig, provider: 'ollama' })}>Ollama</button>
               </div>
               <input className="config-input" type="password" placeholder="DeepSeek API Key" value={aiConfig.deepseekApiKey} onChange={(event) => setAiConfig({ ...aiConfig, deepseekApiKey: event.target.value })} />
               <input className="config-input" type="text" value={aiConfig.deepseekModel} onChange={(event) => setAiConfig({ ...aiConfig, deepseekModel: event.target.value })} />
+              <div className="ai-config-divider" />
+              <div className="ai-config-label">视觉分析（图片/扫描件）— 豆包</div>
+              <input className="config-input" type="password" placeholder="豆包 API Key" value={aiConfig.doubaoApiKey} onChange={(event) => setAiConfig({ ...aiConfig, doubaoApiKey: event.target.value })} />
+              <input className="config-input" type="text" placeholder="豆包 Endpoint ID（ep-xxx）" value={aiConfig.doubaoEndpoint} onChange={(event) => setAiConfig({ ...aiConfig, doubaoEndpoint: event.target.value })} />
               <button className="btn btn-outline full" type="button" onClick={saveAiConfig}><Save size={16} />保存配置</button>
             </div>
           </section>
@@ -618,7 +640,7 @@ function App() {
             </div>
           </div>
 
-          <ParsedFileCards analyses={activeAnalyses} onWithdraw={withdrawUploadedFile} />
+          <ParsedFileCards analyses={activeAnalyses} synthesisResult={synthesisResult} onWithdraw={withdrawUploadedFile} />
 
           <section className="preview-section">
             <h3><span className="dot dot-blue" />解析字段核对</h3>
@@ -984,18 +1006,39 @@ function ChipGroup({ title, items }: { title: string; items: string[] }) {
   return <div className="match-chip-group"><span className="match-chip-title">{title}</span><div className="match-fields">{items.map((item) => <span key={item}>{item}</span>)}</div></div>;
 }
 
-function ParsedFileCards({ analyses, onWithdraw }: { analyses: AnalysisResponse[]; onWithdraw: (fileId?: string | null) => void }) {
+function ParsedFileCards({ analyses, synthesisResult, onWithdraw }: { analyses: AnalysisResponse[]; synthesisResult: SynthesizeResponse | null; onWithdraw: (fileId?: string | null) => void }) {
   return (
     <section className="preview-section">
       <h3><span className="dot dot-blue" />自动归档文件解析</h3>
       {analyses.length === 0 ? <p className="quiet">把材料一股脑拖进左侧上传框后，每个文件会在这里单独生成一个解析卡片。</p> : (
         <div className="parsed-stack">
           {analyses.map((analysis) => <article className="parsed-card" key={analysis.fileId || `${analysis.fileName}-${analysis.size}`}>
-            <div className="parsed-card-head"><div><button className="file-title-link" type="button" onClick={() => openSourceFile(analysis.fileId)}>{safeFileName(analysis.fileName)}</button><p>{analysis.detectedDocumentType} · 自动归档到 {analysis.targetStep}</p></div><div className="parsed-card-actions"><StatusBadge status={analysis.extractedFields.length > 0 ? 'pass' : 'warn'} /><button className="withdraw-btn" type="button" onClick={() => onWithdraw(analysis.fileId)} title="撤回该文件"><Undo2 size={13} />撤回</button></div></div>
+            <div className="parsed-card-head"><div><button className="file-title-link" type="button" onClick={() => openSourceFile(analysis.fileId)}>{safeFileName(analysis.fileName)}</button><p>{analysis.detectedDocumentType} · 自动归档到 {analysis.targetStep}{analysis.visualContent ? ' · 视觉材料' : ''}</p></div><div className="parsed-card-actions"><StatusBadge status={analysis.extractedFields.length > 0 ? 'pass' : 'warn'} /><button className="withdraw-btn" type="button" onClick={() => onWithdraw(analysis.fileId)} title="撤回该文件"><Undo2 size={13} />撤回</button></div></div>
+            {analysis.thumbnailBase64 && (
+              <img className="visual-thumbnail" src={`data:image/jpeg;base64,${analysis.thumbnailBase64}`} alt={safeFileName(analysis.fileName)} />
+            )}
             <div className="parsed-metrics"><span>文本 {analysis.textLength} 字</span><span>字段 {analysis.extractedFields.length} 个</span><span>校验 {analysis.policyChecks.length} 条</span><span>{analysis.aiAdvice.provider} · {analysis.aiAdvice.model}</span></div>
             <p className="ai-summary"><Bot size={15} />{analysis.aiAdvice.summary}</p>
+            {analysis.doubaoAnalysis && (
+              <details className="doubao-panel">
+                <summary><span className="doubao-badge">豆包视觉</span>识别结果（点击展开）</summary>
+                <pre>{analysis.doubaoAnalysis}</pre>
+              </details>
+            )}
             <AiAdvicePanel advice={analysis.aiAdvice} />
           </article>)}
+        </div>
+      )}
+      {synthesisResult && synthesisResult.provider !== 'none' && (
+        <div className="synthesis-panel">
+          <div className="synthesis-header"><Bot size={16} />AI综合分析 <span className="synthesis-provider">{synthesisResult.provider}</span></div>
+          <p className="synthesis-summary">{synthesisResult.summary}</p>
+          {synthesisResult.rawText && (
+            <details className="ai-raw">
+              <summary>完整综合建议（字段 + 情形 + 摘要）</summary>
+              <pre>{synthesisResult.rawText}</pre>
+            </details>
+          )}
         </div>
       )}
     </section>
@@ -1068,7 +1111,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function readAiConfig(): AiConfig {
-  const fallback: AiConfig = { provider: 'deepseek', deepseekApiKey: '', deepseekModel: 'deepseek-chat' };
+  const fallback: AiConfig = { provider: 'deepseek', deepseekApiKey: '', deepseekModel: 'deepseek-chat', doubaoApiKey: '', doubaoEndpoint: '' };
   try {
     return { ...fallback, ...JSON.parse(localStorage.getItem(AI_CONFIG_KEY) || '{}') };
   } catch {

@@ -36,6 +36,13 @@ public class WorkspaceStateService {
         this.projectRecordRepository = projectRecordRepository;
     }
 
+    public synchronized String getProjectType(String projectId) {
+        if (projectId == null || projectId.isBlank()) return null;
+        return projectRecordRepository.findById(projectId)
+                .map(project -> project.getProjectType())
+                .orElse(null);
+    }
+
     public synchronized WorkspaceState getState() {
         return getState(null);
     }
@@ -128,8 +135,8 @@ public class WorkspaceStateService {
         List<DocumentAnalysisResponse> analyses = new ArrayList<>();
         analyses.add(analysis);
         analyses.addAll(step.analyses());
-        if (analyses.size() > 6) {
-            analyses = analyses.subList(0, 6);
+        if (analyses.size() > 20) {
+            analyses = analyses.subList(0, 20);
         }
         replaceStep(projectId, stepId, new StepWorkspace(stepId, new ArrayList<>(fieldMap.values()), new ArrayList<>(checklistMap.values()), analyses, step.policyCardFileName(), deriveSituations(stepId, step.situations(), fieldMap)));
         save(projectId);
@@ -306,12 +313,32 @@ public class WorkspaceStateService {
     }
 
     private List<EditableField> mergeFields(List<EditableField> defaults, List<EditableField> existing) {
-        Map<String, EditableField> fields = defaults.stream()
+        Map<String, EditableField> byKey = defaults.stream()
                 .collect(Collectors.toMap(EditableField::key, field -> field, (a, b) -> a, LinkedHashMap::new));
         if (existing != null) {
-            existing.forEach(field -> fields.put(field.key(), field));
+            existing.forEach(field -> byKey.put(field.key(), field));
         }
-        return new ArrayList<>(fields.values());
+        // Deduplicate by label: AI-extracted fields (key = keyOf(label)) and default fields
+        // (key = semantic name like "projectName") can both map to the same label after a reload.
+        // Prefer the richer value — anything not from a static default source.
+        Map<String, EditableField> byLabel = new LinkedHashMap<>();
+        for (EditableField field : byKey.values()) {
+            byLabel.merge(field.label(), field, (prev, next) -> {
+                boolean prevIsDefault = isDefaultSource(prev.source());
+                boolean nextIsDefault = isDefaultSource(next.source());
+                if (prevIsDefault && !nextIsDefault) return next;
+                if (!prevIsDefault && nextIsDefault) return prev;
+                return prev;
+            });
+        }
+        return new ArrayList<>(byLabel.values());
+    }
+
+    private boolean isDefaultSource(String source) {
+        return source == null
+                || "真实报告样例".equals(source)
+                || "项目建档后待上传材料".equals(source)
+                || "项目档案".equals(source);
     }
 
     private List<StepChecklistItem> mergeChecklist(List<StepChecklistItem> defaults, List<StepChecklistItem> existing) {

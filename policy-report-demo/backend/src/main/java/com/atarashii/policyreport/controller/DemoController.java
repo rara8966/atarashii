@@ -10,6 +10,8 @@ import com.atarashii.policyreport.model.DemoModels.PolicyCardUploadResponse;
 import com.atarashii.policyreport.model.DemoModels.ReportRequest;
 import com.atarashii.policyreport.model.DemoModels.ReportResponse;
 import com.atarashii.policyreport.model.DemoModels.SituationUpdateRequest;
+import com.atarashii.policyreport.model.DemoModels.SynthesizeRequest;
+import com.atarashii.policyreport.model.DemoModels.SynthesizeResponse;
 import com.atarashii.policyreport.model.DemoModels.WorkspaceState;
 import com.atarashii.policyreport.service.DemoProjectService;
 import com.atarashii.policyreport.service.DocumentAnalysisService;
@@ -104,8 +106,16 @@ public class DemoController {
                                                     @RequestParam(value = "aiProvider", required = false) String aiProvider,
                                                     @RequestParam(value = "deepseekApiKey", required = false) String deepseekApiKey,
                                                     @RequestParam(value = "deepseekModel", required = false) String deepseekModel,
+                                                    @RequestParam(value = "doubaoApiKey", required = false) String doubaoApiKey,
+                                                    @RequestParam(value = "doubaoEndpoint", required = false) String doubaoEndpoint,
                                                     @RequestParam(value = "projectId", required = false) String projectId) {
-        return documentAnalysisService.analyze(file, targetStep, fallbackStep, new AiConfig(aiProvider, deepseekApiKey, deepseekModel), projectId);
+        return documentAnalysisService.analyze(file, targetStep, fallbackStep, new AiConfig(aiProvider, deepseekApiKey, deepseekModel, doubaoApiKey, doubaoEndpoint), projectId);
+    }
+
+    @PostMapping("/documents/synthesize")
+    public SynthesizeResponse synthesize(@RequestBody SynthesizeRequest request) {
+        AiConfig aiConfig = new AiConfig(request.aiProvider(), request.deepseekApiKey(), request.deepseekModel(), null, null);
+        return documentAnalysisService.synthesize(request.analyses(), aiConfig);
     }
 
     @PostMapping(value = "/policy-card/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

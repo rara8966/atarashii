@@ -10,6 +10,7 @@ import type {
   ProjectDashboard,
   ProjectRecord,
   ReportResponse,
+  SynthesizeResponse,
   WorkspaceState
 } from './types';
 
@@ -109,9 +110,24 @@ export function analyzeDocument(file: File, targetStep: string, aiConfig: AiConf
   if (aiConfig.provider === 'deepseek' && aiConfig.deepseekApiKey.trim()) {
     formData.append('deepseekApiKey', aiConfig.deepseekApiKey.trim());
   }
+  if (aiConfig.doubaoApiKey?.trim()) formData.append('doubaoApiKey', aiConfig.doubaoApiKey.trim());
+  if (aiConfig.doubaoEndpoint?.trim()) formData.append('doubaoEndpoint', aiConfig.doubaoEndpoint.trim());
   return request<AnalysisResponse>('/api/documents/analyze', {
     method: 'POST',
     body: formData
+  });
+}
+
+export function synthesizeAnalyses(analyses: AnalysisResponse[], aiConfig: AiConfig): Promise<SynthesizeResponse> {
+  return request<SynthesizeResponse>('/api/documents/synthesize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      analyses,
+      aiProvider: aiConfig.provider,
+      deepseekApiKey: aiConfig.deepseekApiKey,
+      deepseekModel: aiConfig.deepseekModel
+    })
   });
 }
 

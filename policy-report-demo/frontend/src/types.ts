@@ -59,6 +59,9 @@ export type AnalysisResponse = {
   extractedFields: ExtractedField[];
   policyChecks: PolicyCheck[];
   aiAdvice: AiAdvice;
+  visualContent?: boolean;
+  thumbnailBase64?: string | null;
+  doubaoAnalysis?: string | null;
 };
 
 export type ReportResponse = {
@@ -78,6 +81,8 @@ export type AiConfig = {
   provider: 'deepseek' | 'ollama' | 'rules';
   deepseekApiKey: string;
   deepseekModel: string;
+  doubaoApiKey: string;
+  doubaoEndpoint: string;
 };
 
 export type EditableField = {
@@ -163,6 +168,12 @@ export type LandUseStandard = {
   chapterTitle: string;
   content: string;
   keywords: string;
+};
+
+export type SynthesizeResponse = {
+  summary: string;
+  rawText: string;
+  provider: string;
 };
 
 export type LandUseStandardMatch = {
