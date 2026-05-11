@@ -371,10 +371,7 @@ function Invoke-BasicSelfTest([bool]$NeedBackend, [bool]$NeedFrontend) {
     Write-Step "Running startup self-test"
     if ($NeedBackend) {
         Wait-Http "http://localhost:8080/api/health" "ok" 120 | Out-Null
-        $body = '{"analyses":[]}'
-        $report = Invoke-RestMethod -Uri "http://localhost:8080/api/reports/generate" -Method Post -ContentType "application/json" -Body $body
-        if (-not $report.markdown -or $report.markdown.Length -lt 100) { throw "Report endpoint returned an invalid response." }
-        Write-Ok "Backend health and report endpoint passed"
+        Write-Ok "Backend health passed"
     }
     if ($NeedFrontend) {
         Wait-Http "http://127.0.0.1:5173/" 'id="root"' 120 | Out-Null

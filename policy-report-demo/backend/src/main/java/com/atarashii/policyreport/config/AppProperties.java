@@ -4,6 +4,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app")
 public class AppProperties {
+    private String jwtSecret = "atarashii-policy-report-jwt-2026-secret-key-must-be-at-least-256-bits-long!!";
+    private long jwtExpirationMs = 2592000000L;
     private String policyCardPath = "../../2025重大项目用地政策明白卡.pdf";
     private String templatePolicyPath = "../../自然资源部办公厅关于进一步规范建设用地报批文本格式的函（自然资办函〔2024〕1009号）.pdf";
     private String ollamaBaseUrl = "http://localhost:11434";
@@ -23,6 +25,11 @@ public class AppProperties {
     private String ocrTesseractDataPath = "";
     private int ocrTesseractPageSegMode = 6;
     private int ocrTesseractTimeoutSeconds = 90;
+
+    public String getJwtSecret() { return jwtSecret; }
+    public void setJwtSecret(String jwtSecret) { this.jwtSecret = jwtSecret; }
+    public long getJwtExpirationMs() { return jwtExpirationMs; }
+    public void setJwtExpirationMs(long jwtExpirationMs) { this.jwtExpirationMs = jwtExpirationMs; }
 
     public String getPolicyCardPath() {
         return policyCardPath;

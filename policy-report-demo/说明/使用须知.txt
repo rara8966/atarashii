@@ -1,0 +1,7 @@
+使用须知
+
+1. 解压后双击根目录的 启动.bat 或 start.bat；如果浏览器未自动打开，请访问 http://127.0.0.1:8080/。
+2. DeepSeek API Key 不在包内。客户需要在页面左侧 AI 配置里自行填写，Key 只保存在当前浏览器本地。
+3. 包内已包含 Java runtime，不要求安装 JDK、Maven、Node.js。
+4. 普通 DOCX/PDF 文本解析可直接使用。若要在客户电脑上识别扫描图片或扫描 PDF，建议安装 Tesseract OCR，并确认路径为 C:\Program Files\Tesseract-OCR\tesseract.exe，语言包包含 chi_sim 和 eng。
+5. 系统运行后会在解压目录下生成 data 文件夹，用于保存客户本机项目库、上传材料和数据库。重新解压一份干净包即可得到全新空数据环境。

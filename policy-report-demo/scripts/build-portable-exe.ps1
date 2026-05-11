@@ -139,7 +139,14 @@ It does not include node_modules, Maven repositories, local uploaded data, or lo
 '@
 [System.IO.File]::WriteAllText((Join-Path $PackageRoot "README-EXE.md"), $guide, [System.Text.UTF8Encoding]::new($false))
 
-Compress-Archive -Path (Join-Path $PackageRoot "*") -DestinationPath $OutputZip -Force
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+Remove-Item -Force $OutputZip -ErrorAction SilentlyContinue
+[System.IO.Compression.ZipFile]::CreateFromDirectory(
+    $PackageRoot,
+    $OutputZip,
+    [System.IO.Compression.CompressionLevel]::Optimal,
+    $false
+)
 $item = Get-Item $OutputZip
 [pscustomobject]@{
     Zip = $OutputZip

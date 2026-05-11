@@ -10,6 +10,12 @@ import java.util.List;
 public interface LandUseStandardRepository extends JpaRepository<LandUseStandardEntity, String> {
     boolean existsBySourceFile(String sourceFile);
 
+    long countByProjectType(String projectType);
+
+    void deleteAllByProjectType(String projectType);
+
+    List<LandUseStandardEntity> findAllByProjectTypeOrderBySortOrderAsc(String projectType);
+
     @Query("""
             select s from LandUseStandardEntity s
             where (:projectType = '' or s.projectType = :projectType)

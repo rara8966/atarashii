@@ -186,3 +186,123 @@ export type LandUseStandardMatch = {
   createdAt: string;
   standard: LandUseStandard;
 };
+
+export type ProjectFile = {
+  id: string;
+  projectId: string;
+  originalName: string;
+  mimeType: string;
+  aiSuggestedStep: number | null;
+  currentStep: number | null;
+  confirmedByUser: boolean;
+  analysisStatus: string;
+  uploadBatch: string;
+  createdAt: string;
+};
+
+export type AnalysisProgress = {
+  total: number;
+  done: number;
+  failed: number;
+  running: number;
+};
+
+export type FileAnalysisDetail = {
+  id: number;
+  fileId: string;
+  projectId: string;
+  extractedText: string;
+  extractedFieldsJson: string;
+  ocrUsed: boolean;
+  doubaoUsed: boolean;
+  aiSummary: string;
+  aiAdvice: string;
+  detectedDocumentType: string;
+  analyzedAt: string;
+};
+
+export type VerdictResult = {
+  projectId: string;
+  stepNo: number;
+  verdict: string;
+  passItemsJson: string;
+  warnItemsJson: string;
+  failItemsJson: string;
+  generatedAt: string;
+};
+
+export type WorkspaceV2 = {
+  files: ProjectFile[];
+  verdicts: VerdictResult[];
+};
+
+export type PreviewStatus = {
+  status: string;
+  markdown: string;
+  generatedAt: string;
+};
+
+export type StepFieldDto = {
+  key: string;
+  label: string;
+  value: string;
+  source: string;
+  sourceFileId: string | null;
+  override: boolean;
+  confidence: number;
+};
+
+export type SituationDto = {
+  stepNo: number;
+  groupId: string;
+  value: string;
+};
+
+export type ProjectTypeDto = {
+  typeKey: string;
+  label: string;
+  enabled: boolean;
+  sourceFile: string | null;
+  sortOrder: number;
+  standardCount: number;
+  tableCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type StandardTableDto = {
+  id: string;
+  projectType: string;
+  projectTypeLabel: string;
+  sourceFile: string;
+  chapter: string;
+  tableCode: string;
+  tableTitle: string;
+  unit: string;
+  headersJson: string;
+  rowsJson: string;
+  annotationJson: string;
+  annotated: boolean;
+  annotatedBy: string;
+  annotatedAt: string;
+  aiPrelabeled: boolean;
+};
+
+export type TableAnnotation = {
+  queryKeys: Array<{ col: number; name: string }>;
+  valueCols: Array<{ col: number; name: string; semantic: 'upper_bound' | 'lower_bound' | 'exact' }>;
+  applicableSituations: Array<{ stepNo: number; groupId: string; value: string }>;
+  notes?: string;
+  source?: 'ai' | 'human';
+  model?: string;
+};
+
+export type StandardItemDto = {
+  id: string;
+  projectType: string;
+  projectTypeLabel: string;
+  sourceFile: string;
+  chapterTitle: string;
+  content: string;
+  keywords: string;
+};

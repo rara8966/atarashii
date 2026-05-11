@@ -7,15 +7,19 @@ import com.atarashii.policyreport.model.DemoModels.DocumentAnalysisResponse;
 import com.atarashii.policyreport.model.DemoModels.ExtractedField;
 import com.atarashii.policyreport.model.DemoModels.PolicyCheck;
 import com.atarashii.policyreport.model.DemoModels.SynthesizeResponse;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -112,7 +116,9 @@ public class DocumentAnalysisService {
 
         String documentType = detectDocumentType(parsed.fileName(), text);
         String stepId = resolveStepId(targetStep, guessStep(documentType, parsed.fileName(), text), fallbackStep);
-        List<ExtractedField> fields = isStandardLibraryDocument(documentType) ? List.of() : attachSourceFile(extractFields(text), fileId);
+        List<ExtractedField> regexFields = isStandardLibraryDocument(documentType) ? List.of() : extractFields(text);
+        List<ExtractedField> aiFields = isStandardLibraryDocument(documentType) ? List.of() : extractFieldsViaAi(text, aiConfig);
+        List<ExtractedField> fields = attachSourceFile(mergeFields(regexFields, aiFields), fileId);
         List<PolicyCheck> checks = runPolicyChecks(text, stepId, documentType, fields);
         addOcrCheck(checks, ocrResult);
 
@@ -225,6 +231,73 @@ public class DocumentAnalysisService {
 
     private boolean isStepId(String value) {
         return value != null && value.matches("step[1-8]");
+    }
+
+    /**
+     * 用 DeepSeek 抽取尽可能多的结构化字段，与 regex 抽取结果合并。
+     * 仅当 provider=deepseek 且填了 API Key 时调用，否则返回空列表。
+     */
+    private List<ExtractedField> extractFieldsViaAi(String text, AiConfig aiConfig) {
+        if (text == null || text.isBlank()) return List.of();
+        if (aiConfig == null || !"deepseek".equalsIgnoreCase(aiConfig.provider())) return List.of();
+        if (aiConfig.deepseekApiKey() == null || aiConfig.deepseekApiKey().isBlank()) return List.of();
+
+        String snippet = text.length() > 8_000 ? text.substring(0, 8_000) : text;
+        String prompt = "你是建设用地报批材料字段抽取专家。请从以下文本中尽量多地抽取所有可结构化字段。\n\n"
+                + "请关注（不限于）：\n"
+                + "- 文档元信息：文号、批复文号、签发日期、批准日期、有效期\n"
+                + "- 项目信息：项目名称、项目代码、建设单位、设计单位、建设地点、建设规模\n"
+                + "- 用地数据：总用地面积、农用地面积、耕地面积、林地面积、永久基本农田、未利用地、征收面积、新增建设用地\n"
+                + "- 工程参数：线路长度、桥梁长度、隧道长度、桥隧比、地形类型、设计速度\n"
+                + "- 财务/审批：核准文号、立项文号、有偿使用费、补偿金额、社保资金\n"
+                + "- 评估结论：地质灾害评估等级、压覆矿产结论、社会稳定风险等级、生态影响结论\n"
+                + "- 其他规则字段：林地批复编号、占补平衡情况、安置方式、听证情况\n\n"
+                + "要求：\n"
+                + "1. 仅基于文本中实际出现的内容抽取，不要编造\n"
+                + "2. 输出严格的 JSON 数组，每元素 {\"label\": \"字段名（4-12字）\", \"value\": \"字段值（保留原文格式与单位）\"}\n"
+                + "3. 不要输出 JSON 之外的内容（不要 markdown、不要解释）\n"
+                + "4. 文本中没有的字段不要硬塞\n"
+                + "5. 数值带单位（如\"123.45 公顷\"）\n"
+                + "6. 完全无可结构化字段时输出 []\n\n"
+                + "文本：\n===\n" + snippet + "\n===\n请直接输出 JSON 数组：";
+
+        try {
+            DeepSeekClient.GenerationResult result = deepSeekClient.generate(prompt, aiConfig.deepseekApiKey(), aiConfig.deepseekModel());
+            if (!result.usedModel()) return List.of();
+            String jsonText = extractJsonArray(result.text());
+            if (jsonText == null) return List.of();
+            ObjectMapper mapper = new ObjectMapper();
+            List<Map<String, Object>> raw = mapper.readValue(jsonText, new TypeReference<List<Map<String, Object>>>() {});
+            List<ExtractedField> out = new ArrayList<>();
+            for (Map<String, Object> row : raw) {
+                Object labelObj = row.get("label");
+                Object valueObj = row.get("value");
+                if (labelObj == null || valueObj == null) continue;
+                String label = String.valueOf(labelObj).trim();
+                String value = String.valueOf(valueObj).trim();
+                if (label.isBlank() || value.isBlank()) continue;
+                out.add(new ExtractedField(label, value, "DeepSeek 抽取", 0.85, null));
+            }
+            return out;
+        } catch (Exception ignored) {
+            return List.of();
+        }
+    }
+
+    private String extractJsonArray(String text) {
+        if (text == null) return null;
+        int start = text.indexOf('[');
+        int end = text.lastIndexOf(']');
+        if (start < 0 || end <= start) return null;
+        return text.substring(start, end + 1);
+    }
+
+    /** 以 label 为 key 合并；primary（regex）优先保留，secondary（AI）补充缺失字段。 */
+    private List<ExtractedField> mergeFields(List<ExtractedField> primary, List<ExtractedField> secondary) {
+        Map<String, ExtractedField> seen = new LinkedHashMap<>();
+        for (ExtractedField f : primary) seen.putIfAbsent(f.label(), f);
+        for (ExtractedField f : secondary) seen.putIfAbsent(f.label(), f);
+        return new ArrayList<>(seen.values());
     }
 
     private List<ExtractedField> extractFields(String text) {

@@ -1,0 +1,1833 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>管理员版项目流程图</title>
+  <style>
+    :root {
+      --ink: #142033;
+      --muted: #5e6c80;
+      --line: rgba(20, 32, 51, 0.12);
+      --panel: rgba(255, 255, 255, 0.86);
+      --panel-strong: #ffffff;
+      --sky: #d7efff;
+      --aqua: #8fe2d1;
+      --gold: #ffd88c;
+      --coral: #ffb4a2;
+      --navy: #174783;
+      --teal: #0d8a72;
+      --amber: #b67611;
+      --rose: #bb4b5b;
+      --shadow: 0 18px 48px rgba(20, 32, 51, 0.12);
+      font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(215, 239, 255, 0.95), transparent 32%),
+        radial-gradient(circle at top right, rgba(255, 216, 140, 0.58), transparent 26%),
+        linear-gradient(135deg, #f5f8fc 0%, #eef5f2 48%, #fdf8ef 100%);
+    }
+
+    .page {
+      width: min(1300px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 56px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.75fr);
+      gap: 20px;
+      align-items: stretch;
+      margin-bottom: 24px;
+    }
+
+    .hero-card,
+    .login-card,
+    .section,
+    .focus-card,
+    .board,
+    .legend-card {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(18px);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 34px 32px 30px;
+      overflow: hidden;
+      position: relative;
+      isolation: isolate;
+    }
+
+    .hero-card::before,
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      inset: auto;
+      border-radius: 999px;
+      filter: blur(10px);
+      opacity: 0.8;
+      z-index: -1;
+    }
+
+    .hero-card::before {
+      width: 180px;
+      height: 180px;
+      right: -40px;
+      top: -30px;
+      background: rgba(143, 226, 209, 0.45);
+    }
+
+    .hero-card::after {
+      width: 220px;
+      height: 220px;
+      left: -70px;
+      bottom: -110px;
+      background: rgba(255, 216, 140, 0.3);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--navy);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    h1 {
+      margin: 18px 0 10px;
+      font-size: clamp(34px, 5vw, 54px);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      transform: translateX(-54px);
+      opacity: 0;
+      animation: slide-left 0.8s cubic-bezier(.2,.8,.2,1) forwards;
+    }
+
+    .lead {
+      margin: 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .hero-points {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .hero-point {
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.76);
+      border: 1px solid var(--line);
+      min-height: 110px;
+    }
+
+    .hero-point strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    .hero-point span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .login-card {
+      padding: 26px 24px;
+      display: grid;
+      gap: 16px;
+      transform: translateX(54px);
+      opacity: 0;
+      animation: slide-right 0.8s cubic-bezier(.2,.8,.2,1) 0.12s forwards;
+    }
+
+    .login-card h2,
+    .section h2,
+    .focus-card h2,
+    .board h2,
+    .legend-card h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .login-shell {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.88), rgba(247,250,255,0.82));
+      border: 1px solid var(--line);
+      border-radius: 20px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field span {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .field div {
+      height: 44px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #fff;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      color: #99a4b4;
+      font-size: 14px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      border: 0;
+      cursor: default;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #174783, #0d8a72);
+      color: #fff;
+      box-shadow: 0 10px 24px rgba(23, 71, 131, 0.24);
+    }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.82);
+      border: 1px solid var(--line);
+      color: var(--navy);
+    }
+
+    .role-strip {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid var(--line);
+      color: var(--ink);
+    }
+
+    .chip.active {
+      background: rgba(23, 71, 131, 0.1);
+      color: var(--navy);
+      border-color: rgba(23, 71, 131, 0.22);
+    }
+
+    .grid {
+      display: grid;
+      gap: 20px;
+    }
+
+    .section {
+      padding: 28px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    .section-head p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      max-width: 760px;
+      line-height: 1.7;
+    }
+
+    .pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.8);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .flowline {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .node {
+      position: relative;
+      padding: 16px 14px 14px;
+      border-radius: 20px;
+      background: var(--panel-strong);
+      border: 1px solid var(--line);
+      min-height: 190px;
+      display: grid;
+      align-content: start;
+      gap: 10px;
+    }
+
+    .node::after {
+      content: "";
+      position: absolute;
+      top: 34px;
+      right: -12px;
+      width: 12px;
+      height: 2px;
+      background: rgba(20, 32, 51, 0.24);
+    }
+
+    .node:last-child::after {
+      display: none;
+    }
+
+    .node .stage {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .blue { background: var(--navy); }
+    .teal { background: var(--teal); }
+    .amber { background: var(--amber); }
+    .rose { background: var(--rose); }
+
+    .node h3 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.4;
+    }
+
+    .node p,
+    .node li,
+    .mini-card p,
+    .focus-card li,
+    .board li,
+    .legend-card li {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .node ul,
+    .focus-card ul,
+    .board ul,
+    .legend-card ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .parallel-zone {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 16px;
+    }
+
+    .focus-card,
+    .legend-card,
+    .board {
+      padding: 22px;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .mini-card {
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.84);
+    }
+
+    .mini-card b {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .board-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .step-card {
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.92);
+      padding: 14px;
+      min-height: 134px;
+    }
+
+    .step-card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .banner {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(23,71,131,0.08), rgba(13,138,114,0.08));
+      border: 1px solid rgba(23,71,131,0.12);
+      color: var(--navy);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    details {
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.76);
+      padding: 14px 16px;
+    }
+
+    details + details {
+      margin-top: 12px;
+    }
+
+    summary {
+      cursor: default;
+      list-style: none;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .legend-card ul {
+      display: grid;
+      gap: 10px;
+    }
+
+    .legend-card li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .overall-map {
+      display: grid;
+      gap: 14px;
+    }
+
+    .catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .catalog-card {
+      min-height: 140px;
+      padding: 16px 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid var(--line);
+    }
+
+    .catalog-card b {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .catalog-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .catalog-card.off {
+      background: rgba(245, 248, 252, 0.88);
+      border-style: dashed;
+    }
+
+    .catalog-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(23, 71, 131, 0.08);
+      color: var(--navy);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .route-flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .route-card {
+      position: relative;
+      min-height: 148px;
+      padding: 16px 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid var(--line);
+    }
+
+    .route-card::after {
+      content: "→";
+      position: absolute;
+      top: 50%;
+      right: -11px;
+      transform: translateY(-50%);
+      color: rgba(20, 32, 51, 0.34);
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .route-flow .route-card:last-child::after {
+      display: none;
+    }
+
+    .route-card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .route-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .analysis-flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .analysis-card {
+      position: relative;
+      min-height: 158px;
+      padding: 16px 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--line);
+    }
+
+    .analysis-card::after {
+      content: "→";
+      position: absolute;
+      top: 50%;
+      right: -11px;
+      transform: translateY(-50%);
+      color: rgba(20, 32, 51, 0.34);
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .analysis-flow .analysis-card:last-child::after {
+      display: none;
+    }
+
+    .analysis-card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .analysis-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .result-card {
+      min-height: 154px;
+      padding: 16px 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .result-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .result-card.pass .result-chip {
+      background: rgba(13, 138, 114, 0.12);
+      color: var(--teal);
+    }
+
+    .result-card.warn .result-chip {
+      background: rgba(182, 118, 17, 0.12);
+      color: var(--amber);
+    }
+
+    .result-card.fail .result-chip {
+      background: rgba(187, 75, 91, 0.12);
+      color: var(--rose);
+    }
+
+    .result-card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .result-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .showcase-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+      margin-top: 18px;
+    }
+
+    .mock-screen {
+      padding: 18px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(244,248,253,0.92));
+      border: 1px solid var(--line);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+    }
+
+    .mock-topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .mock-title {
+      display: grid;
+      gap: 6px;
+    }
+
+    .mock-title strong {
+      font-size: 18px;
+    }
+
+    .mock-title span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .status-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .status-pill.pass {
+      color: var(--teal);
+      background: rgba(13, 138, 114, 0.1);
+      border-color: rgba(13, 138, 114, 0.16);
+    }
+
+    .status-pill.warn {
+      color: var(--amber);
+      background: rgba(182, 118, 17, 0.1);
+      border-color: rgba(182, 118, 17, 0.16);
+    }
+
+    .status-pill.fail {
+      color: var(--rose);
+      background: rgba(187, 75, 91, 0.1);
+      border-color: rgba(187, 75, 91, 0.16);
+    }
+
+    .mock-body {
+      display: grid;
+      gap: 12px;
+    }
+
+    .mock-block {
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid var(--line);
+    }
+
+    .mock-block h3 {
+      margin: 0 0 10px;
+      font-size: 15px;
+    }
+
+    .fact-table,
+    .evidence-list,
+    .preview-steps {
+      display: grid;
+      gap: 8px;
+    }
+
+    .fact-row,
+    .evidence-item,
+    .preview-step {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 12px;
+      padding: 10px 0;
+      border-top: 1px solid rgba(20, 32, 51, 0.08);
+      font-size: 13px;
+    }
+
+    .fact-row:first-child,
+    .evidence-item:first-child,
+    .preview-step:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .fact-row b,
+    .evidence-item b,
+    .preview-step b {
+      font-size: 13px;
+      color: var(--ink);
+    }
+
+    .fact-row span,
+    .evidence-item span,
+    .preview-step span {
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .export-card {
+      padding: 18px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,248,238,0.92));
+      border: 1px solid var(--line);
+    }
+
+    .export-card h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .preview-chain {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .chain-card {
+      position: relative;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.92);
+      min-height: 112px;
+    }
+
+    .chain-card::after {
+      content: "↓";
+      position: absolute;
+      left: 50%;
+      bottom: -17px;
+      transform: translateX(-50%);
+      color: rgba(20, 32, 51, 0.34);
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .preview-chain .chain-card:last-child::after {
+      display: none;
+    }
+
+    .chain-card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .chain-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .phase-strip {
+      display: grid;
+      grid-template-columns: 170px repeat(8, minmax(140px, 1fr));
+      gap: 10px;
+      align-items: center;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .phase-strip span {
+      min-height: 42px;
+      border-radius: 14px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .phase-strip span:first-child {
+      background: transparent;
+      border: 0;
+    }
+
+    .swimlane {
+      display: grid;
+      grid-template-columns: 170px minmax(0, 1fr);
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .lane-title {
+      padding: 18px 16px;
+      border-radius: 20px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      min-height: 146px;
+    }
+
+    .lane-title.user {
+      background: linear-gradient(160deg, #174783, #2a73b6);
+    }
+
+    .lane-title.system {
+      background: linear-gradient(160deg, #0d8a72, #26a78f);
+    }
+
+    .lane-title.ai {
+      background: linear-gradient(160deg, #b67611, #d99216);
+    }
+
+    .lane-body {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(140px, 1fr));
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .track-card {
+      position: relative;
+      min-height: 146px;
+      padding: 16px 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid var(--line);
+    }
+
+    .track-card::after {
+      content: "→";
+      position: absolute;
+      top: 50%;
+      right: -11px;
+      transform: translateY(-50%);
+      color: rgba(20, 32, 51, 0.34);
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .lane-body .track-card:last-child::after {
+      display: none;
+    }
+
+    .track-card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .track-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .track-card.muted {
+      background: rgba(245, 248, 252, 0.86);
+      border-style: dashed;
+    }
+
+    .track-card.highlight {
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(215,239,255,0.68));
+      border-color: rgba(23, 71, 131, 0.18);
+    }
+
+    .map-note {
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(255, 216, 140, 0.24), rgba(143, 226, 209, 0.24));
+      border: 1px solid rgba(20, 32, 51, 0.1);
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      margin-top: 6px;
+      flex: 0 0 10px;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @keyframes slide-left {
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slide-right {
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @media (max-width: 1180px) {
+      .hero,
+      .parallel-zone,
+      .split,
+      .flowline,
+      .mini-grid,
+      .board-grid,
+      .catalog-grid,
+      .route-flow,
+      .analysis-flow,
+      .result-grid,
+      .showcase-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .node::after {
+        display: none;
+      }
+
+      .hero-points {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        width: min(calc(100vw - 20px), 760px);
+        padding-top: 16px;
+      }
+
+      .phase-strip,
+      .swimlane,
+      .lane-body {
+        grid-template-columns: 1fr;
+      }
+
+      .track-card::after {
+        display: none;
+      }
+
+      .analysis-card::after,
+      .route-card::after {
+        display: none;
+      }
+
+      .fact-row,
+      .evidence-item,
+      .preview-step {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      .hero-card,
+      .section,
+      .focus-card,
+      .board,
+      .legend-card,
+      .login-card {
+        border-radius: 18px;
+      }
+
+      .hero-card,
+      .section,
+      .focus-card,
+      .board,
+      .legend-card {
+        padding: 20px;
+      }
+
+      .login-card {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <article class="hero-card">
+        <div class="eyebrow">管理员默认入口 · 首页先看系统定位</div>
+        <h1>建设用地报批审查报告生成系统</h1>
+        <p class="lead">
+          首页左侧展示系统标题与能力摘要，右侧进入账号密码登录。登录后不直接进八步，而是先进入“项目总览”，从草稿箱/历史项目切入，再走“新建项目 → 批量上传 → AI 预判断 → 项目信息确认 → 八步工作台”的新版流程。
+        </p>
+        <div class="hero-points">
+          <div class="hero-point">
+            <strong>入口先分角色</strong>
+            <span>现在默认管理员，后续可以扩展普通用户、审核人、领导查看等角色。</span>
+          </div>
+          <div class="hero-point">
+            <strong>AI 提前并行启动</strong>
+            <span>用户第一次全量上传后，系统立刻按文件名和内容特征做项目类型判断、八步预分类。</span>
+          </div>
+          <div class="hero-point">
+            <strong>用户拿回文件控制权</strong>
+            <span>自动分类只是建议，文件可以撤回、重投、改挂到任一板块，不再被系统锁死。</span>
+          </div>
+        </div>
+      </article>
+
+      <aside class="login-card">
+        <h2>首页右侧登录区</h2>
+        <div class="login-shell">
+          <div class="role-strip">
+            <div class="chip active">管理员</div>
+            <div class="chip">报件专员</div>
+            <div class="chip">审核查看</div>
+          </div>
+          <div class="field">
+            <span>账号</span>
+            <div>请输入账号</div>
+          </div>
+          <div class="field">
+            <span>密码</span>
+            <div>请输入密码</div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary">登录进入项目总览</button>
+            <button class="btn btn-ghost">注册账号</button>
+          </div>
+        </div>
+        <div class="banner">
+          这一步开始就接数据库：账号、密码、角色、最近项目、草稿状态、历史项目、项目编号都需要持久化，不再只是本地演示态。
+        </div>
+      </aside>
+    </section>
+
+    <section class="section grid">
+      <div class="section-head">
+        <div>
+          <h2>主流程总览</h2>
+          <p>下面这条主线把你刚说的完整串起来，重点体现“先建项目壳，再批量上传，上传后 AI 后台并行分析，用户前台继续确认项目关键信息，最后进入八步工作台”。</p>
+        </div>
+        <div class="pill">从首页到八步的最短路径</div>
+      </div>
+
+      <div class="flowline">
+        <article class="node">
+          <div class="stage blue">01</div>
+          <h3>首页</h3>
+          <ul>
+            <li>左侧标题滑入</li>
+            <li>右侧账号密码登录/注册</li>
+            <li>后续可扩角色，当前默认管理员</li>
+          </ul>
+        </article>
+
+        <article class="node">
+          <div class="stage teal">02</div>
+          <h3>登录后项目总览</h3>
+          <ul>
+            <li>显示“新建项目草稿”入口</li>
+            <li>下方保留草稿箱/历史项目</li>
+            <li>沿用现有规则展示最近处理记录</li>
+          </ul>
+        </article>
+
+        <article class="node">
+          <div class="stage amber">03</div>
+          <h3>点击创建项目</h3>
+          <ul>
+            <li>创建数据库项目记录</li>
+            <li>自动生成系统编号、创建时间、状态</li>
+            <li>默认先落到“待上传材料”</li>
+          </ul>
+        </article>
+
+        <article class="node">
+          <div class="stage rose">04</div>
+          <h3>第一次全量上传</h3>
+          <ul>
+            <li>引导把所有材料先拖进来</li>
+            <li>先提取文件名、文件类型、页数等轻信息</li>
+            <li>上传完成立即触发 AI 预分析</li>
+          </ul>
+        </article>
+
+        <article class="node">
+          <div class="stage blue">05</div>
+          <h3>AI 先判断项目类型</h3>
+          <ul>
+            <li>根据文件名首轮识别项目类型</li>
+            <li>结果支持抽屉展开后人工更换</li>
+            <li>确认前不锁死后续流程</li>
+          </ul>
+        </article>
+
+        <article class="node">
+          <div class="stage teal">06</div>
+          <h3>补录项目基本信息</h3>
+          <ul>
+            <li>项目名称</li>
+            <li>建设单位</li>
+            <li>建设地点</li>
+          </ul>
+        </article>
+
+        <article class="node">
+          <div class="stage amber">07</div>
+          <h3>确认后进入八步工作台</h3>
+          <ul>
+            <li>读取 AI 预分类结果</li>
+            <li>沿用当前八步审查逻辑</li>
+            <li>但用户可主动调文件位置</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="parallel-zone">
+        <article class="focus-card">
+          <h2>批量上传后的并行分叉</h2>
+          <div class="mini-grid">
+            <div class="mini-card">
+              <b>前台仍可继续操作</b>
+              <p>用户不需要等 AI 全部跑完，可以先确认项目类型、修改类型、填写项目名称/建设单位/建设地点。</p>
+            </div>
+            <div class="mini-card">
+              <b>后台 AI 异步分析</b>
+              <p>上传一结束就开始扫描文件名、抽样 OCR、识别所属步骤、推送“分析中/已完成”状态。</p>
+            </div>
+            <div class="mini-card">
+              <b>分析完成自动回填</b>
+              <p>AI 识别完后，把文件自动挂到八步草稿区；如果用户已经改过分类，系统优先保留用户选择。</p>
+            </div>
+          </div>
+          <div class="banner">
+            关键原则：AI 是助手，不是裁判。自动分类可以提速，但用户必须始终能看见文件当前在哪、能撤回、能改挂、能补传。
+          </div>
+        </article>
+
+        <article class="legend-card">
+          <h2>数据库建议主对象</h2>
+          <ul>
+            <li><span class="dot blue"></span><span>用户表：账号、密码摘要、角色、启用状态。</span></li>
+            <li><span class="dot teal"></span><span>项目表：UUID、系统编号、项目类型、名称、建设单位、建设地点、流程状态。</span></li>
+            <li><span class="dot amber"></span><span>文件表：原始文件、识别状态、当前步骤、AI 推荐步骤、来源上传批次。</span></li>
+            <li><span class="dot rose"></span><span>操作日志：谁把哪个文件从哪个板块撤回/改挂到哪一步，保证可追溯。</span></li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="split">
+      <article class="board">
+        <h2>八步工作台进入后的状态</h2>
+        <ul>
+          <li>页面顶部展示项目编号、项目名称、分析进度、当前角色。</li>
+          <li>左侧仍保留八步导航，沿用现在的规则和材料清单。</li>
+          <li>中间展示当前步骤材料池，分为“AI 已归类”“用户手动放置”“待确认材料”。</li>
+          <li>右侧可以展开抽屉查看 AI 为什么把文件判到这个步骤，方便用户纠错。</li>
+        </ul>
+
+        <div class="board-grid">
+          <div class="step-card">
+            <strong>第一步到第八步</strong>
+            <p>沿用现有审查逻辑与校验规则，不推翻当前系统积累。</p>
+          </div>
+          <div class="step-card">
+            <strong>待确认区</strong>
+            <p>AI 没把握、或者用户刚撤回的文件，先放这里，避免误伤正式步骤。</p>
+          </div>
+          <div class="step-card">
+            <strong>撤回与改挂</strong>
+            <p>任意文件都可以从当前步骤撤回，再指定拖到别的步骤，用户拥有最终决定权。</p>
+          </div>
+          <div class="step-card">
+            <strong>分析不打断录入</strong>
+            <p>AI 仍在跑时，工作台照常可用；新结果回来时只做柔性提示，不强制覆盖。</p>
+          </div>
+        </div>
+
+        <div class="banner">
+          八步里的 AI 不是只做“文件分到哪一步”。它真正要做的是把用户上传的文件先解析成文本和字段，再拿字段去对规则做比对，最后给出“通过 / 不通过 / 注意”的判定结果。
+        </div>
+
+        <div class="analysis-flow">
+          <div class="analysis-card">
+            <strong>1. 解析上传文件</strong>
+            <p>对 PDF、Word、扫描件、图片先做 OCR、版面识别、正文抽取，拿到尽量完整的可分析文本。</p>
+          </div>
+          <div class="analysis-card">
+            <strong>2. 提取结构化字段</strong>
+            <p>从文本里抽取项目名称、建设单位、建设地点、面积、文号、日期、坐标、审批结论等字段。</p>
+          </div>
+          <div class="analysis-card">
+            <strong>3. 映射到步骤字段</strong>
+            <p>把抽出来的字段挂到八步各自的字段池里，知道哪些字段属于哪一步、来自哪份材料。</p>
+          </div>
+          <div class="analysis-card">
+            <strong>4. 匹配规则字段</strong>
+            <p>再把步骤字段去对当前项目分类对应的标准字段，判断规则要求了什么、材料里是否提供了什么。</p>
+          </div>
+          <div class="analysis-card">
+            <strong>5. 做对比并输出判定</strong>
+            <p>按规则比对后输出结果卡：满足就通过，不满足就不通过，存在风险或需人工确认就标注意。</p>
+          </div>
+        </div>
+
+        <div class="mini-grid">
+          <div class="mini-card">
+            <b>必传文件</b>
+            <p>当前步骤规则明确要求必须上传的材料。AI 如果没找到这类文件，或者文件里抽不到必需字段，直接影响该步骤判定，通常落到“不通过”。</p>
+          </div>
+          <div class="mini-card">
+            <b>选传文件</b>
+            <p>规则允许补充但不是硬性要求的材料。没上传不直接判“不通过”，但如果上传了，AI 仍会解析并把它作为辅助证据参与比对和提醒。</p>
+          </div>
+          <div class="mini-card">
+            <b>条件选传文件</b>
+            <p>平时不要求，但一旦命中条件就会升级为必看材料。比如项目类型、占地情形、林地/耕地等条件触发后，缺失就不能按普通选传处理。</p>
+          </div>
+        </div>
+
+        <div class="result-grid">
+          <div class="result-card pass">
+            <div class="result-chip">通过</div>
+            <strong>字段齐全且命中规则</strong>
+            <p>AI 已找到关键字段，和当前步骤规则比对后满足要求，可以直接显示“通过”并附上命中的文件证据。</p>
+          </div>
+          <div class="result-card warn">
+            <div class="result-chip">注意</div>
+            <strong>字段有值，但存在风险点</strong>
+            <p>比如选传材料提供了补充信息但文本表述模糊、面积接近阈值、文件间字段不一致、需要人工复核，这类结果先标“注意”。</p>
+          </div>
+          <div class="result-card fail">
+            <div class="result-chip">不通过</div>
+            <strong>缺字段或和规则冲突</strong>
+            <p>没抽到必传字段、必传或条件选传材料缺失、字段和标准明显不符，就标“不通过”，同时指出缺什么、冲突在哪。</p>
+          </div>
+        </div>
+
+        <div class="banner">
+          所以后面真正落地时，每一步都不只是一个上传框，而应该有“原始文件、抽取字段、命中规则、判定结果、证据来源”这 5 个层次。
+        </div>
+      </article>
+
+      <article class="focus-card">
+        <h2>需要重点体现的交互动作</h2>
+        <details open>
+          <summary>1. 新建项目时先生成项目壳</summary>
+          <ul>
+            <li>用户点“创建项目”后马上得到系统编号。</li>
+            <li>即使还没上传完，也能作为草稿持续保存。</li>
+            <li>草稿箱和历史项目用同一套项目列表结构。</li>
+          </ul>
+        </details>
+
+        <details open>
+          <summary>2. 第一次上传先全量，后精修</summary>
+          <ul>
+            <li>先把所有材料扔进来，系统快速识别项目类型和材料大致归属。</li>
+            <li>接着用户补三项核心字段，再正式进入八步。</li>
+            <li>避免一开始就让用户在八步里逐格找位置，降低首次操作门槛。</li>
+          </ul>
+        </details>
+
+        <details open>
+          <summary>3. 自动分类可纠错</summary>
+          <ul>
+            <li>每个文件都要能看到“当前在哪一步”“AI 推荐哪一步”。</li>
+            <li>用户可以一键撤回，也可以重新指定步骤。</li>
+            <li>系统记录人工修正结果，后续可反哺模型提示词。</li>
+          </ul>
+        </details>
+      </article>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>AI 提醒卡片示意</h2>
+          <p>这块直接模拟八步里用户真正会看到的提醒样子。核心不是一句“通过/不通过”，而是一张能看清楚规则、字段、证据、原因的判定卡片。</p>
+        </div>
+        <div class="pill">把 AI 结果展示成可核验卡片</div>
+      </div>
+
+      <div class="showcase-grid">
+        <article class="board">
+          <div class="mock-screen">
+            <div class="mock-topbar">
+              <div class="mock-title">
+                <strong>第六步 · 土地利用 AI 审查卡</strong>
+                <span>当前规则包：公路工程项目建设用地指标 · 当前材料：土地利用总体图、现状调查表、用地说明</span>
+              </div>
+              <div class="status-pills">
+                <div class="status-pill pass">通过项 3</div>
+                <div class="status-pill warn">注意项 2</div>
+                <div class="status-pill fail">不通过项 1</div>
+              </div>
+            </div>
+
+            <div class="mock-body">
+              <div class="mock-block">
+                <h3>当前判定</h3>
+                <div class="fact-table">
+                  <div class="fact-row">
+                    <b>材料类型</b>
+                    <span>必传：土地利用现状材料；选传：土地有偿使用费材料；条件选传：占用耕地时的补充说明材料</span>
+                  </div>
+                  <div class="fact-row">
+                    <b>AI 结论</b>
+                    <span>土地利用现状材料已命中规则并可通过；土地有偿使用费材料识别到但文本存在模糊表述，建议人工复核；若项目命中占用耕地条件，当前缺补充材料。</span>
+                  </div>
+                  <div class="fact-row">
+                    <b>动作建议</b>
+                    <span>允许先进入预览，但需在最终确认前补齐条件选传材料，否则预览报告将保留“不通过”提示。</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mock-block">
+                <h3>抽取字段</h3>
+                <div class="fact-table">
+                  <div class="fact-row">
+                    <b>项目面积</b>
+                    <span>0.45 公顷，来源：土地利用现状调查表第 2 页</span>
+                  </div>
+                  <div class="fact-row">
+                    <b>地类信息</b>
+                    <span>乔木林地、旱地，来源：现状图例说明与调查表交叉抽取</span>
+                  </div>
+                  <div class="fact-row">
+                    <b>审批文号</b>
+                    <span>渝自然资规审〔2026〕18 号，来源：用地说明第 1 页</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mock-block">
+                <h3>命中规则与证据</h3>
+                <div class="evidence-list">
+                  <div class="evidence-item">
+                    <b>规则 1</b>
+                    <span>“土地利用现状材料”为本步骤必传文件。命中文件：土地利用现状调查表.pdf，状态：通过。</span>
+                  </div>
+                  <div class="evidence-item">
+                    <b>规则 2</b>
+                    <span>土地有偿使用费材料为选传。命中文件：有偿使用费说明.docx，但金额字段上下文不完整，状态：注意。</span>
+                  </div>
+                  <div class="evidence-item">
+                    <b>规则 3</b>
+                    <span>若涉及占用耕地，补充说明材料升级为条件选传必看件。当前抽到“旱地”字段，状态：不通过，缺补充材料。</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <aside class="focus-card">
+          <div class="export-card">
+            <h3>最终预览与导出链路</h3>
+            <p class="lead">用户把八步都确认完之后，不是直接导出，而是要再点一次“预览”。这一步会再调用一次 AI，基于最终确认版材料和字段，生成一份预览报告。</p>
+
+            <div class="preview-chain">
+              <div class="chain-card">
+                <strong>1. 用户点击“生成预览”</strong>
+                <p>这代表用户已经对八步材料、分类、字段、撤回改挂结果都做了最终确认。</p>
+              </div>
+              <div class="chain-card">
+                <strong>2. 系统冻结当前快照</strong>
+                <p>把当前项目字段、步骤判定、文件归属和标准路由打一个快照，避免生成过程中内容继续漂移。</p>
+              </div>
+              <div class="chain-card">
+                <strong>3. 再调用一次 AI 生成预览报告</strong>
+                <p>这次不是重新做分类，而是把已经确认好的结构化结果组织成正式预览报告，生成摘要、问题清单、通过项、注意项、不通过项。</p>
+              </div>
+              <div class="chain-card">
+                <strong>4. 用户看预览报告</strong>
+                <p>可以看到报告正文、引用证据、步骤判定汇总。如果发现问题，还能返回八步继续修正。</p>
+              </div>
+              <div class="chain-card">
+                <strong>5. 点击导出</strong>
+                <p>确认预览无误后，再导出正式报告，可支持 Word、PDF 或 Markdown 等格式。</p>
+              </div>
+            </div>
+
+            <div class="mock-block" style="margin-top: 14px;">
+              <h3>预览报告里至少要有</h3>
+              <div class="preview-steps">
+                <div class="preview-step">
+                  <b>报告摘要</b>
+                  <span>项目类型、建设单位、建设地点、系统编号、当前使用规则包。</span>
+                </div>
+                <div class="preview-step">
+                  <b>步骤汇总</b>
+                  <span>八步分别有多少通过、注意、不通过项，以及对应缺件清单。</span>
+                </div>
+                <div class="preview-step">
+                  <b>证据引用</b>
+                  <span>每条结论来自哪份文件、哪一页、抽到了哪些字段，保证用户能回查。</span>
+                </div>
+                <div class="preview-step">
+                  <b>导出控制</b>
+                  <span>只有预览版确认后才能正式导出，避免把未确认的中间结果直接出给外部。</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>我建议的页面层级</h2>
+          <p>如果你认这个流程，后面前端就可以按这个层级拆页面，不用再把所有东西都塞进现在一个工作台入口里。</p>
+        </div>
+        <div class="pill">从展示稿到可开发结构</div>
+      </div>
+
+      <div class="mini-grid">
+        <div class="mini-card">
+          <b>页面 1：首页</b>
+          <p>系统标题、账号密码、注册入口、角色切换。</p>
+        </div>
+        <div class="mini-card">
+          <b>页面 2：项目总览</b>
+          <p>新建项目、草稿箱、历史项目、最近编辑进度。</p>
+        </div>
+        <div class="mini-card">
+          <b>页面 3：创建项目向导</b>
+          <p>先生成项目编号，再引导第一次全量上传。</p>
+        </div>
+        <div class="mini-card">
+          <b>页面 4：项目类型确认</b>
+          <p>AI 识别项目类型，用户可开抽屉更换。</p>
+        </div>
+        <div class="mini-card">
+          <b>页面 5：项目信息确认</b>
+          <p>项目名称、建设单位、建设地点三项确认。</p>
+        </div>
+        <div class="mini-card">
+          <b>页面 6：八步工作台</b>
+          <p>AI 自动归类 + 用户手动调整 + 步骤判定与提醒。</p>
+        </div>
+        <div class="mini-card">
+          <b>页面 7：预览报告</b>
+          <p>点击预览后再次调用 AI，生成预览报告，确认无误后再导出。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>标准库嵌入与调用规则</h2>
+          <p>这块单独画规则层。第一阶段先嵌入“土地用地标准（文件提取）”里的 8 套分类标准，再加 1 套通用建设用地标准做兜底；三个“土地使用标准汇编”先不接，避免规则源过杂。</p>
+        </div>
+        <div class="pill">先接可路由的标准库</div>
+      </div>
+
+      <div class="split">
+        <article class="board">
+          <h2>首批接入的标准来源</h2>
+          <div class="catalog-grid">
+            <div class="catalog-card">
+              <div class="catalog-badge">分类标准 1</div>
+              <b>电力工程项目建设用地指标（火电厂、核电厂、变电站和换流站）</b>
+              <p>用户确认是这类项目时，直接调用这一套标准做条款匹配与面积/指标提醒。</p>
+            </div>
+            <div class="catalog-card">
+              <div class="catalog-badge">分类标准 2</div>
+              <b>电力工程项目建设用地指标（风电场）</b>
+              <p>风电项目单独走风电标准，不和其他电力工程混用。</p>
+            </div>
+            <div class="catalog-card">
+              <div class="catalog-badge">分类标准 3</div>
+              <b>石油天然气工程项目建设用地指标</b>
+              <p>当项目分类选到油气工程，就按这一套规则做证据比对和提醒。</p>
+            </div>
+            <div class="catalog-card">
+              <div class="catalog-badge">分类标准 4</div>
+              <b>煤炭工程项目建设用地指标</b>
+              <p>针对煤炭工程使用独立标准，不和铁路、公路等项目共用阈值。</p>
+            </div>
+            <div class="catalog-card">
+              <div class="catalog-badge">分类标准 5</div>
+              <b>新建铁路工程项目建设用地指标</b>
+              <p>铁路项目选择完成后，系统切到铁路专属标准包。</p>
+            </div>
+            <div class="catalog-card">
+              <div class="catalog-badge">分类标准 6</div>
+              <b>公路工程项目建设用地指标</b>
+              <p>公路工程独立分析，避免与铁路或机场规则混淆。</p>
+            </div>
+            <div class="catalog-card">
+              <div class="catalog-badge">分类标准 7</div>
+              <b>民用航空运输机场工程项目建设用地指标</b>
+              <p>机场项目按民航运输机场标准包匹配，不走其他交通类标准。</p>
+            </div>
+            <div class="catalog-card">
+              <div class="catalog-badge">分类标准 8</div>
+              <b>公共图书馆、文化馆、体育训练基地、城市社区体育设施建设用地指标</b>
+              <p>公共服务设施类统一走这一套标准做提醒。</p>
+            </div>
+            <div class="catalog-card">
+              <div class="catalog-badge">通用兜底</div>
+              <b>建设用地指标（各工程核心表格合并）</b>
+              <p>如果用户选的项目分类不属于上面 8 类，就先调用这套通用建设用地标准兜底分析。</p>
+            </div>
+            <div class="catalog-card off">
+              <div class="catalog-badge">暂不接入</div>
+              <b>土地使用标准汇编（上/中/下册）</b>
+              <p>这一阶段先不接入，避免规则量过大、检索噪音过高，等前面 8 类和通用标准跑顺了再扩充。</p>
+            </div>
+          </div>
+
+          <div class="banner">
+            规则路由原则很明确：不是上传完就立刻套标准，而是先把用户材料文本尽量分析完，再等用户把项目分类确认下来，最后按对应标准包生成针对性的 AI 提醒。
+          </div>
+        </article>
+
+        <article class="focus-card">
+          <h2>标准调用顺序</h2>
+          <div class="route-flow">
+            <div class="route-card">
+              <strong>1. 用户先上传全部文件</strong>
+              <p>这时先不让用户选标准，也不急着给规则结论，先把原始材料吃进去。</p>
+            </div>
+            <div class="route-card">
+              <strong>2. AI 先做全文分析</strong>
+              <p>优先 OCR、抽文本、识别目录、提取关键字段，把每份文件的文本证据先准备好。</p>
+            </div>
+            <div class="route-card">
+              <strong>3. AI 给出项目分类建议</strong>
+              <p>系统先根据文件名和文本特征推荐项目分类，但这一步仍然允许用户改。</p>
+            </div>
+            <div class="route-card">
+              <strong>4. 用户确认项目分类</strong>
+              <p>用户在抽屉里确认或更换项目分类，这个选择决定后面调用哪套标准。</p>
+            </div>
+            <div class="route-card">
+              <strong>5. 系统装载对应标准包</strong>
+              <p>如果命中 8 类项目，就走专属标准；没命中就走“建设用地指标（各工程核心表格合并）”兜底。</p>
+            </div>
+            <div class="route-card">
+              <strong>6. 按标准生成 AI 提醒</strong>
+              <p>等全文分析完成后，再把文本证据和标准条款对上，给用户输出审查提醒、风险提示和缺件建议。</p>
+            </div>
+          </div>
+
+          <div class="mini-grid">
+            <div class="mini-card">
+              <b>规则先拆材料清单</b>
+              <p>系统先把当前项目分类和当前步骤对应的材料清单拆成“必传、选传、条件选传”三类，后面的 AI 比对都围绕这张清单展开。</p>
+            </div>
+            <div class="mini-card">
+              <b>必传缺失直接拉响</b>
+              <p>如果 AI 在上传材料里找不到必传文件，或者找到文件但抽不出规则需要的关键字段，就直接进入缺件或不通过提醒。</p>
+            </div>
+            <div class="mini-card">
+              <b>选传作为补充证据</b>
+              <p>选传文件更像补充说明。没传不一定挡住流程，但传了就要参与解析，帮助 AI 给出更完整的提醒和判断。</p>
+            </div>
+          </div>
+
+          <details open>
+            <summary>提醒逻辑应该长什么样</summary>
+            <ul>
+              <li>提醒不是死板校验，而是“文件证据 + 对应标准 + AI 解释”的组合结果。</li>
+              <li>提醒要明确告诉用户：是依据哪套标准、命中了哪些文本、缺了什么材料或哪些指标需要注意。</li>
+              <li>如果用户后来改了项目分类，系统要重新切标准包，再刷新 AI 提醒，不沿用旧结论。</li>
+                <li>提醒里还要明确标出：当前提示针对的是必传文件、选传文件，还是命中条件后的条件选传文件。</li>
+            </ul>
+          </details>
+
+          <details open>
+            <summary>这块和八步工作台怎么接</summary>
+            <ul>
+              <li>八步工作台看到的不只是“文件被分到哪一步”，还要看到“当前项目使用的是哪套标准”。</li>
+              <li>AI 标准提醒要挂在对应步骤或项目总览处，不能散掉，否则用户不知道提醒来自哪里。</li>
+              <li>如果某类项目暂无专属标准，就明确显示“当前使用通用建设用地标准兜底分析”。</li>
+            </ul>
+          </details>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>总工作流图</h2>
+          <p>这块专门把整个项目工作流压成一张总图。重点看第 4 段开始，用户前台、系统后台、AI 异步三条线是并行推进的，最后在八步工作台汇合。</p>
+        </div>
+        <div class="pill">页面最底下看全链路</div>
+      </div>
+
+      <div class="overall-map">
+        <div class="phase-strip">
+          <span></span>
+          <span>1. 登录入口</span>
+          <span>2. 项目总览</span>
+          <span>3. 新建项目壳</span>
+          <span>4. 第一次全量上传</span>
+          <span>5. 项目类型确认与标准装载</span>
+          <span>6. 八步工作台承接与提醒</span>
+          <span>7. 最终确认与预览生成</span>
+          <span>8. 导出正式报告</span>
+        </div>
+
+        <div class="swimlane">
+          <div class="lane-title user">用户前台</div>
+          <div class="lane-body">
+            <article class="track-card">
+              <strong>首页登录</strong>
+              <p>管理员输入账号密码，也可以注册新账号。</p>
+            </article>
+            <article class="track-card">
+              <strong>进入项目总览</strong>
+              <p>看到新建项目草稿、草稿箱、历史项目。</p>
+            </article>
+            <article class="track-card">
+              <strong>点击创建项目</strong>
+              <p>先拿到系统编号和草稿状态，再开始上传。</p>
+            </article>
+            <article class="track-card highlight">
+              <strong>首次批量上传全部材料</strong>
+              <p>用户先不分八步，先把手头材料整体拖入。</p>
+            </article>
+            <article class="track-card highlight">
+              <strong>确认项目类型并补三项信息</strong>
+              <p>项目类型可改，填写项目名称、建设单位、建设地点，并触发对应标准装载。</p>
+            </article>
+            <article class="track-card">
+              <strong>进入八步工作台查看提醒</strong>
+              <p>开始基于现有八步逻辑继续补件、核验、整理，同时查看标准分析提醒。</p>
+            </article>
+            <article class="track-card">
+              <strong>全部确认后点击预览</strong>
+              <p>把八步材料、字段和判定都确认完，再点击“生成预览报告”。</p>
+            </article>
+            <article class="track-card">
+              <strong>确认预览后导出</strong>
+              <p>预览报告没问题后，用户再执行正式导出。</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="swimlane">
+          <div class="lane-title system">系统后台</div>
+          <div class="lane-body">
+            <article class="track-card muted">
+              <strong>鉴权与角色识别</strong>
+              <p>校验账号密码，读取管理员角色。</p>
+            </article>
+            <article class="track-card muted">
+              <strong>拉取草稿与历史项目</strong>
+              <p>读取数据库项目列表与最近编辑状态。</p>
+            </article>
+            <article class="track-card muted">
+              <strong>创建项目记录</strong>
+              <p>写入 UUID、系统编号、创建时间、流程状态。</p>
+            </article>
+            <article class="track-card highlight">
+              <strong>保存上传批次与原始文件</strong>
+              <p>记录文件来源、批次号、当前未确认状态。</p>
+            </article>
+            <article class="track-card highlight">
+              <strong>持久化项目类型、基础字段与标准路由</strong>
+              <p>保存类型确认结果与三项基本信息，同时装载命中的标准包或通用兜底标准。</p>
+            </article>
+            <article class="track-card muted">
+              <strong>切换到工作台状态机</strong>
+              <p>把项目推进到“八步处理中”，并把标准提醒结果挂到项目总览和步骤区。</p>
+            </article>
+            <article class="track-card muted">
+              <strong>冻结预览快照</strong>
+              <p>把当前确认版字段、材料归属、规则命中和判定结果锁成一版预览快照。</p>
+            </article>
+            <article class="track-card muted">
+              <strong>生成并导出正式文件</strong>
+              <p>保留每次撤回、改挂、补传、预览生成、正式导出的追溯信息。</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="swimlane">
+          <div class="lane-title ai">AI 异步</div>
+          <div class="lane-body">
+            <article class="track-card muted">
+              <strong>待上传触发</strong>
+              <p>用户未上传前，这条链路保持空闲。</p>
+            </article>
+            <article class="track-card muted">
+              <strong>待上传触发</strong>
+              <p>不会抢在用户前面做无意义分析。</p>
+            </article>
+            <article class="track-card muted">
+              <strong>待上传触发</strong>
+              <p>项目壳建立后，等待材料真正进来。</p>
+            </article>
+            <article class="track-card highlight">
+              <strong>快速提取文件名与全文文本</strong>
+              <p>先做文件级识别、OCR 和文本抽取，把每份材料能拿到的文本证据尽量准备完整。</p>
+            </article>
+            <article class="track-card highlight">
+              <strong>给出项目类型建议并等待确认</strong>
+              <p>根据文件名和文本特征推荐项目分类，同时预估材料可能所属步骤，但暂不输出标准结论。</p>
+            </article>
+            <article class="track-card highlight">
+              <strong>按已确认分类调用标准</strong>
+              <p>用户确认分类后，切换到对应标准包，把文本证据和条款做针对性匹配。</p>
+            </article>
+            <article class="track-card highlight">
+              <strong>二次生成预览报告</strong>
+              <p>基于最终确认版结果，再调用一次 AI 组织成预览报告正文，而不是重新做中间判定。</p>
+            </article>
+            <article class="track-card highlight">
+              <strong>导出版内容定稿</strong>
+              <p>预览确认后，AI 生成最终可导出的报告内容；同时吸收人工修正结果，为后续优化提供依据。</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="map-note">
+          先让用户无负担地把材料丢进来，AI 先把全文和分类建议跑完，等用户确认项目分类后再切到对应标准包，在八步里做判定与修正，最后点击“预览”再二次调用 AI 生成预览报告，确认无误后再正式导出。
+        </div>
+      </div>
+    </section>
+
+    <p class="footer-note">这个页面是给你快速看流程结构的静态稿，不是最终 UI 定稿。</p>
+  </main>
+</body>
+</html>

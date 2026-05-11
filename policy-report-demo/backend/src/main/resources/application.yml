@@ -6,15 +6,15 @@ server:
       enabled: true
       force: true
   tomcat:
-    connection-timeout: 300000  # 5 min — large PDF OCR can take minutes
+    connection-timeout: 300000
     keep-alive-timeout: 310000
 
 spring:
   datasource:
-    url: jdbc:h2:file:./data/policy-report-demo-db;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    url: jdbc:mysql://localhost:3306/atarashii?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false&connectionCollation=utf8mb4_unicode_ci
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: atarashii
+    password: 123456
   jpa:
     hibernate:
       ddl-auto: update
@@ -22,12 +22,15 @@ spring:
     properties:
       hibernate:
         format_sql: false
+        dialect: org.hibernate.dialect.MySQLDialect
   servlet:
     multipart:
       max-file-size: 300MB
       max-request-size: 320MB
 
 app:
+  jwt-secret: atarashii-policy-report-jwt-2026-secret-key-must-be-at-least-256-bits-long!!
+  jwt-expiration-ms: 2592000000
   policy-card-path: ../../2025重大项目用地政策明白卡.pdf
   template-policy-path: ../../自然资源部办公厅关于进一步规范建设用地报批文本格式的函（自然资办函〔2024〕1009号）.pdf
   ollama-base-url: http://localhost:11434

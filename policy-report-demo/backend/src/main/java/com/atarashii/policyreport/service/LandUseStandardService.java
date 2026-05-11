@@ -51,6 +51,98 @@ public class LandUseStandardService {
         return repository.search(safe(projectType), safe(query), PageRequest.of(0, size)).stream().map(this::toDto).toList();
     }
 
+    public List<LandUseStandardDto> listByType(String projectType) {
+        return repository.findAllByProjectTypeOrderBySortOrderAsc(projectType).stream().map(this::toDto).toList();
+    }
+
+    public long countByType(String projectType) {
+        return repository.countByProjectType(projectType);
+    }
+
+    @Transactional
+    public void clearByType(String projectType) {
+        repository.deleteAllByProjectType(projectType);
+    }
+
+    /**
+     * 批量追加条目到指定项目类型；如果 replaceByTitle=true，对每个 chapterTitle 会先删旧条目再插新条目（幂等）。
+     */
+    @Transactional
+    public int appendItems(String typeKey, String typeLabel,
+                           List<java.util.Map<String, String>> items, boolean replaceByTitle) {
+        if (items == null || items.isEmpty()) return 0;
+        int order = (int) repository.countByProjectType(typeKey);
+        List<LandUseStandardEntity> toSave = new ArrayList<>();
+        for (var item : items) {
+            String rawTitle = item.get("chapterTitle");
+            String rawContent = item.get("content");
+            String sourceFile = item.getOrDefault("sourceFile", "");
+            if (rawTitle == null || rawContent == null) continue;
+            final String title = rawTitle.trim();
+            final String content = rawContent.trim();
+            if (title.isBlank() || content.isBlank()) continue;
+            if (replaceByTitle) {
+                // 同 typeKey + 同 chapterTitle 的旧条目先删
+                repository.findAllByProjectTypeOrderBySortOrderAsc(typeKey).stream()
+                        .filter(e -> title.equals(e.getChapterTitle()))
+                        .forEach(repository::delete);
+            }
+            LandUseStandardEntity entity = new LandUseStandardEntity();
+            entity.setProjectType(typeKey);
+            entity.setProjectTypeLabel(typeLabel);
+            entity.setSourceFile(sourceFile);
+            entity.setChapterTitle(title);
+            entity.setContent(content);
+            entity.setKeywords(buildKeywords(typeLabel, title, content));
+            entity.setSortOrder(order++);
+            toSave.add(entity);
+        }
+        if (!toSave.isEmpty()) repository.saveAll(toSave);
+        return toSave.size();
+    }
+
+    /**
+     * 导入新的 docx 标准库到指定项目类型。
+     * @param inputStream docx 二进制流
+     * @param sourceName  原始文件名
+     * @param typeKey     项目类型 key
+     * @param typeLabel   项目类型显示名
+     * @param replace     true=先清空该 typeKey 下旧条目再写入；false=追加
+     * @return 实际写入条数
+     */
+    @Transactional
+    public int importFromDocx(InputStream inputStream, String sourceName, String typeKey, String typeLabel, boolean replace) {
+        if (typeKey == null || typeKey.isBlank()) throw new IllegalArgumentException("项目类型 key 不能为空");
+        if (typeLabel == null || typeLabel.isBlank()) typeLabel = projectTypeCatalog.labelOf(typeKey);
+        String text;
+        try {
+            text = normalize(parser.parse(inputStream, sourceName, "application/vnd.openxmlformats-officedocument.wordprocessingml.document").text());
+        } catch (Exception e) {
+            throw new IllegalStateException("解析 docx 失败：" + e.getMessage(), e);
+        }
+        if (text.isBlank()) throw new IllegalStateException("文档内容为空，无法导入");
+
+        if (replace) repository.deleteAllByProjectType(typeKey);
+
+        int baseOrder = (int) repository.countByProjectType(typeKey);
+        List<StandardChunk> chunks = split(sourceName, text);
+        List<LandUseStandardEntity> entities = new ArrayList<>();
+        int order = baseOrder;
+        for (StandardChunk chunk : chunks) {
+            LandUseStandardEntity entity = new LandUseStandardEntity();
+            entity.setProjectType(typeKey);
+            entity.setProjectTypeLabel(typeLabel);
+            entity.setSourceFile(sourceName);
+            entity.setChapterTitle(chunk.title());
+            entity.setContent(chunk.content());
+            entity.setKeywords(buildKeywords(typeLabel, chunk.title(), chunk.content()));
+            entity.setSortOrder(order++);
+            entities.add(entity);
+        }
+        if (!entities.isEmpty()) repository.saveAll(entities);
+        return entities.size();
+    }
+
     public List<StandardSummary> summaries() {
         Map<String, Long> counts = new LinkedHashMap<>();
         repository.findAll().forEach(item -> counts.merge(item.getProjectType(), 1L, Long::sum));

@@ -37,6 +37,12 @@ public class ProjectRecordEntity {
     @Column(nullable = false, length = 30)
     private String status;
 
+    @Column(length = 64)
+    private String standardSet;
+
+    @Column(length = 64)
+    private String createdBy;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -78,4 +84,8 @@ public class ProjectRecordEntity {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public String getStandardSet() { return standardSet; }
+    public void setStandardSet(String standardSet) { this.standardSet = standardSet; }
+    public String getCreatedBy() { return createdBy; }
+    public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
 }
