@@ -58,6 +58,5 @@ Round 3: 所有文件上传完后 → DeepSeek 综合分析所有 AI 输出
 ---
 
 ## 已知限制
-- 豆包 Endpoint: ep-20260126190029-bbd2h
-- 豆包 API Key: ark-bd8b1526-fb47-43dc-a8c8-ab1fef9acfc2-31cb4
+- 豆包 Endpoint / API Key 运行时由请求参数传入，不写入仓库（配置说明见 `backend/src/main/resources/application-local.yml.example`）
 - `max_tokens: 600`（严格限制输出）

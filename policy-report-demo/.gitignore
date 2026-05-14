@@ -12,3 +12,7 @@ report-empty-result.json
 .copilot-test/
 .runtime/
 PolicyReportDemo/
+dist-package/
+
+# 本地敏感配置（密钥/密码），不提交
+backend/src/main/resources/application-local.yml

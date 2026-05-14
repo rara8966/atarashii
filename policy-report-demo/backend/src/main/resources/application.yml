@@ -10,11 +10,13 @@ server:
     keep-alive-timeout: 310000
 
 spring:
+  config:
+    import: optional:application-local.yml
   datasource:
     url: jdbc:mysql://localhost:3306/atarashii?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false&connectionCollation=utf8mb4_unicode_ci
     driver-class-name: com.mysql.cj.jdbc.Driver
-    username: atarashii
-    password: 123456
+    username: ${DB_USERNAME:atarashii}
+    password: ${DB_PASSWORD:}
   jpa:
     hibernate:
       ddl-auto: update
@@ -29,7 +31,7 @@ spring:
       max-request-size: 320MB
 
 app:
-  jwt-secret: atarashii-policy-report-jwt-2026-secret-key-must-be-at-least-256-bits-long!!
+  jwt-secret: ${JWT_SECRET:}
   jwt-expiration-ms: 2592000000
   policy-card-path: ../../2025重大项目用地政策明白卡.pdf
   template-policy-path: ../../自然资源部办公厅关于进一步规范建设用地报批文本格式的函（自然资办函〔2024〕1009号）.pdf

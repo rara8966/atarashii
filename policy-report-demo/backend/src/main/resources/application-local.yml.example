@@ -1,0 +1,13 @@
+# 模板文件 —— 复制为同目录下的 application-local.yml 并填入实际值。
+# application-local.yml 已被 .gitignore 忽略，不会提交；本 .example 文件可提交。
+#
+# 也可改用环境变量注入（application.yml 已支持）：
+#   DB_USERNAME / DB_PASSWORD / JWT_SECRET
+spring:
+  datasource:
+    username: atarashii
+    password: <你的本地 MySQL 密码>
+
+app:
+  # 至少 256 bit（>=32 字符）的强随机字符串，每个环境独立
+  jwt-secret: <强随机字符串>

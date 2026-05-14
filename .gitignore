@@ -8,6 +8,10 @@
 .runtime/
 PolicyReportDemo/
 policy-report-demo/PolicyReportDemo/
+dist-package/
+
+# Local secrets — never commit
+**/application-local.yml
 *.zip
 *.exe
 *.msi
