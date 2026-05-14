@@ -6,7 +6,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class DocumentAnalysisServiceTest {
-    private final DocumentAnalysisService service = new DocumentAnalysisService(null, null, null, null, null, null, null, null, null);
+    // 注意：构造器多了一个 FunctionalZoneCatalog 参数（第 10 个）。测试不依赖它的实现，可传 null。
+    private final DocumentAnalysisService service = new DocumentAnalysisService(null, null, null, null, null, null, null, null, null, null);
 
     @Test
     void recognizesCustomerNamedMaterials() {

@@ -8,6 +8,7 @@ import com.atarashii.policyreport.persistence.ProjectRecordEntity;
 import com.atarashii.policyreport.persistence.StepVerdictEntity;
 import com.atarashii.policyreport.service.AsyncAnalysisService;
 import com.atarashii.policyreport.service.PreviewService;
+import com.atarashii.policyreport.service.FunctionalZoneVerdictService;
 import com.atarashii.policyreport.service.ProjectFileService;
 import com.atarashii.policyreport.service.ProjectRecordService;
 import com.atarashii.policyreport.service.ProjectSituationService;
@@ -41,6 +42,7 @@ public class ProjectController {
     private final StepFieldService stepFieldService;
     private final ProjectSituationService situationService;
     private final SituationAutoDetectService situationAutoDetectService;
+    private final FunctionalZoneVerdictService zoneVerdictService;
 
     public ProjectController(ProjectRecordService projectRecordService,
                              ProjectFileService projectFileService,
@@ -50,7 +52,8 @@ public class ProjectController {
                              ProjectTypeCatalog projectTypeCatalog,
                              StepFieldService stepFieldService,
                              ProjectSituationService situationService,
-                             SituationAutoDetectService situationAutoDetectService) {
+                             SituationAutoDetectService situationAutoDetectService,
+                             FunctionalZoneVerdictService zoneVerdictService) {
         this.projectRecordService = projectRecordService;
         this.projectFileService = projectFileService;
         this.verdictEngine = verdictEngine;
@@ -60,6 +63,7 @@ public class ProjectController {
         this.stepFieldService = stepFieldService;
         this.situationService = situationService;
         this.situationAutoDetectService = situationAutoDetectService;
+        this.zoneVerdictService = zoneVerdictService;
     }
 
     // ── 项目 CRUD ──
@@ -246,6 +250,31 @@ public class ProjectController {
                                                                 @PathVariable String groupId,
                                                                 @RequestBody Map<String, String> body) {
         return situationService.upsert(id, stepNo, groupId, body.getOrDefault("value", ""));
+    }
+
+    /** 功能区合规分析：按功能区拿对应已标注的标准表，跟项目字段做查表 + 数值比对。 */
+    @GetMapping("/{id}/functional-zone-verdict")
+    public List<FunctionalZoneVerdictService.ZoneVerdict> functionalZoneVerdict(@PathVariable String id) {
+        return zoneVerdictService.verdictForProject(id);
+    }
+
+    /**
+     * dev 工具：直接往项目里注入一份"模拟分析完成的文件"，extractedFieldsJson 由调用方传入。
+     * 用于在没有真实 docx 的情况下测试 VerdictEngine。
+     * body: {"fileName": "...", "fields": [{label, value, functionalZone}]}
+     */
+    @PostMapping("/{id}/_debug/inject-mock-fields")
+    public Map<String, Object> injectMockFields(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        try {
+            String fileName = String.valueOf(body.getOrDefault("fileName", "模拟项目说明.txt"));
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> fields = (List<Map<String, Object>>) body.getOrDefault("fields", List.of());
+            if (fields.isEmpty()) return Map.of("error", "fields 不能为空");
+            String fileId = projectFileService.injectMock(id, fileName, fields);
+            return Map.of("fileId", fileId, "fieldCount", fields.size(), "message", "已注入 mock 文件 " + fileId);
+        } catch (Exception e) {
+            return Map.of("error", e.getMessage());
+        }
     }
 
     /** AI 自动识别项目情形：基于项目所有已分析文件让 DeepSeek 推断每组应选选项。 */

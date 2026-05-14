@@ -25,6 +25,7 @@ public class ProjectFileService {
     private final OperationLogRepository logRepository;
     private final AsyncAnalysisService asyncAnalysisService;
     private final Path uploadDir = Path.of("data", "uploads");
+    private final com.fasterxml.jackson.databind.ObjectMapper mockObjectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
     public ProjectFileService(ProjectFileRepository fileRepository,
                               FileAnalysisRepository analysisRepository,
@@ -134,5 +135,42 @@ public class ProjectFileService {
     private String safeName(String name) {
         if (name == null || name.isBlank()) return "upload.bin";
         return name.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+    }
+
+    /**
+     * dev/demo 工具：直接造一份"分析完成的文件"，extractedFieldsJson 由调用方提供。
+     * 用于在没有真实 docx 的情况下灌入字段测试 VerdictEngine。
+     */
+    @Transactional
+    public String injectMock(String projectId, String fileName, java.util.List<java.util.Map<String, Object>> fields) {
+        if (fields == null || fields.isEmpty()) {
+            throw new IllegalArgumentException("fields 不能为空");
+        }
+        ProjectFileEntity pf = new ProjectFileEntity();
+        pf.setProjectId(projectId);
+        pf.setOriginalName(safeName(fileName));
+        pf.setMimeType("text/plain");
+        pf.setStoragePath("[mock]");
+        pf.setAnalysisStatus("DONE");
+        pf.setConfirmedByUser(true);
+        pf.setUploadBatch("mock");
+        pf.setCurrentStep(1);
+        fileRepository.save(pf);
+
+        FileAnalysisEntity fa = new FileAnalysisEntity();
+        fa.setFileId(pf.getId());
+        fa.setProjectId(projectId);
+        fa.setDetectedDocumentType("模拟数据（功能区合规演示）");
+        fa.setExtractedText("");
+        try {
+            fa.setExtractedFieldsJson(mockObjectMapper.writeValueAsString(fields));
+        } catch (Exception e) {
+            fa.setExtractedFieldsJson("[]");
+        }
+        fa.setOcrUsed(false);
+        fa.setDoubaoUsed(false);
+        fa.setAnalyzedAt(java.time.LocalDateTime.now());
+        analysisRepository.save(fa);
+        return pf.getId();
     }
 }

@@ -292,9 +292,38 @@ export type TableAnnotation = {
   queryKeys: Array<{ col: number; name: string }>;
   valueCols: Array<{ col: number; name: string; semantic: 'upper_bound' | 'lower_bound' | 'exact' }>;
   applicableSituations: Array<{ stepNo: number; groupId: string; value: string }>;
+  functionalZone?: string;
   notes?: string;
   source?: 'ai' | 'human';
   model?: string;
+};
+
+export type IndicatorVerdictDto = {
+  indicatorName: string;
+  standardValue: string;
+  actualValue: string;
+  semantic: string;
+  verdict: 'PASS' | 'FAIL' | 'WARN' | 'UNKNOWN';
+  deltaPct: number | null;
+  note: string;
+  sourceFileId: string | null;
+};
+
+export type TableVerdictDto = {
+  tableId: string;
+  tableCode: string;
+  tableTitle: string;
+  matchedQueryKeys: Record<string, string>;
+  matchedRowIndex: number;
+  indicators: IndicatorVerdictDto[];
+};
+
+export type ZoneVerdictDto = {
+  functionalZone: string;
+  matchedTables: number;
+  totalAnnotatedTables: number;
+  projectFieldCount: number;
+  tables: TableVerdictDto[];
 };
 
 export type StandardItemDto = {

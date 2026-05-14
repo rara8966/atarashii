@@ -186,3 +186,22 @@ function isNegativeLabel(label: string): boolean {
 export function flattenAllGroups(): CaseGroup[] {
   return Object.values(CASE_GROUPS).flat();
 }
+
+// ── 功能区目录（与后端 FunctionalZoneCatalog 同步）──
+// 一个项目设施的不同构筑物用地组成部分，VerdictEngine 按功能区分别查表比对。
+
+export const FUNCTIONAL_ZONES: Record<string, string[]> = {
+  'wind-power':     ['风电机组', '机组变电站', '集电线路', '升压变电站及运行管理中心', '交通工程'],
+  'power-station':  ['厂区/站区主体', '厂前建筑区', '厂外取水建筑物', '工艺管线', '运煤皮带廊道', '运输道路', '生活区'],
+  'oil-gas':        ['采气场站', '处理厂', '集输管线', '输气干线', '压气站', '辅助设施'],
+  'coal':           ['井口及工业广场', '选煤厂', '矸石场', '运输线路', '辅助生产设施'],
+  'railway':        ['正线路基', '桥梁工程', '隧道工程', '车站', '区间设施', '运营管理设施'],
+  'highway':        ['路基工程', '桥梁工程', '隧道工程', '互通立交', '服务区', '管理及养护设施'],
+  'airport':        ['飞行区', '航站区', '工作区', '生活区', '供油设施', '导航设施'],
+  'public-facility':['主体建筑', '辅助用房', '室外活动场地', '停车与道路'],
+  'general':        ['主体工程', '辅助工程', '公用工程', '环境保护', '施工临时用地'],
+};
+
+export function zonesOf(projectType: string): string[] {
+  return FUNCTIONAL_ZONES[projectType] ?? [];
+}

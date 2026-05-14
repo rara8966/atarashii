@@ -12,7 +12,7 @@ import {
   saveTableAnnotation, aiPrelabelTable, aiPrelabelAllTables,
 } from '../api';
 import type { ProjectTypeDto, StandardItemDto, StandardTableDto, TableAnnotation } from '../types';
-import { CASE_GROUPS } from '../materialSpecs';
+import { CASE_GROUPS, zonesOf } from '../materialSpecs';
 import NavBar from './NavBar';
 
 const AI_CONFIG_KEY = 'policy-report-demo-ai-config';
@@ -31,6 +31,7 @@ function parseAnnotation(json: string): TableAnnotation | null {
       queryKeys: Array.isArray(v.queryKeys) ? v.queryKeys : [],
       valueCols: Array.isArray(v.valueCols) ? v.valueCols : [],
       applicableSituations: Array.isArray(v.applicableSituations) ? v.applicableSituations : [],
+      functionalZone: typeof v.functionalZone === 'string' ? v.functionalZone : '',
       notes: typeof v.notes === 'string' ? v.notes : '',
       source: v.source,
       model: v.model,
@@ -75,6 +76,7 @@ function StandardTableView({ table, onUpdate, onError, onNotice }: {
   }
   const initialSituations = initialAnnotation?.applicableSituations ?? [];
   const initialNotes = initialAnnotation?.notes ?? '';
+  const initialZone = initialAnnotation?.functionalZone ?? '';
 
   const [editing, setEditing] = useState(false);
   const [colState, setColState] = useState<Record<number, ColState>>(initialColState);
@@ -82,8 +84,11 @@ function StandardTableView({ table, onUpdate, onError, onNotice }: {
   const [colSemantic, setColSemantic] = useState<Record<number, Semantic>>(initialColSemantic);
   const [situations, setSituations] = useState<Array<{ stepNo: number; groupId: string; value: string }>>(initialSituations);
   const [notes, setNotes] = useState(initialNotes);
+  const [functionalZone, setFunctionalZone] = useState(initialZone);
   const [saving, setSaving] = useState(false);
   const [prelabeling, setPrelabeling] = useState(false);
+
+  const zoneOptions = zonesOf(table.projectType);
 
   function reload(fresh: StandardTableDto) {
     const ann = parseAnnotation(fresh.annotationJson);
@@ -99,6 +104,7 @@ function StandardTableView({ table, onUpdate, onError, onNotice }: {
     setColSemantic(csem);
     setSituations(ann?.applicableSituations ?? []);
     setNotes(ann?.notes ?? '');
+    setFunctionalZone(ann?.functionalZone ?? '');
   }
 
   function cycleCol(c: number) {
@@ -125,7 +131,7 @@ function StandardTableView({ table, onUpdate, onError, onNotice }: {
       if (st === 'key') queryKeys.push({ col: c, name });
       else if (st === 'value') valueCols.push({ col: c, name, semantic: colSemantic[c] ?? 'upper_bound' });
     }
-    return { queryKeys, valueCols, applicableSituations: situations, notes, source: 'human' };
+    return { queryKeys, valueCols, applicableSituations: situations, functionalZone, notes, source: 'human' };
   }
 
   async function save() {
@@ -210,6 +216,11 @@ function StandardTableView({ table, onUpdate, onError, onNotice }: {
           {table.aiPrelabeled && !table.annotated && (
             <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#b676111a', color: '#b67611', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 600 }}>
               <Sparkles size={11} />AI 待确认
+            </span>
+          )}
+          {functionalZone && (
+            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#3b82f61a', color: '#3b82f6', fontWeight: 600 }}>
+              🏗️ {functionalZone}
             </span>
           )}
           {!table.annotated && !table.aiPrelabeled && (
@@ -367,6 +378,26 @@ function StandardTableView({ table, onUpdate, onError, onNotice }: {
             {Array.from({ length: colCount }, (_, c) => c)
               .filter(c => colState[c] === 'key' || colState[c] === 'value').length === 0 && (
               <div style={{ fontSize: '11px', color: '#888' }}>请点击上方表头列设置「查询键」和「标准值」</div>
+            )}
+          </div>
+
+          {/* 功能区 */}
+          <div style={{ marginBottom: '10px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#444', marginBottom: '4px' }}>
+              功能区 <span style={{ color: '#888', fontWeight: 'normal' }}>（一个项目的不同构筑物用地组成部分，比如风电分 5 个功能区）</span>
+            </div>
+            <select
+              value={functionalZone}
+              onChange={e => setFunctionalZone(e.target.value)}
+              style={{ width: '100%', fontSize: '11px', padding: '4px 6px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+            >
+              <option value="">— 通用 / 未归类 —</option>
+              {zoneOptions.map(z => <option key={z} value={z}>{z}</option>)}
+            </select>
+            {zoneOptions.length === 0 && (
+              <div style={{ fontSize: '10px', color: '#bb4b5b', marginTop: '3px' }}>
+                此项目类型未在 FunctionalZoneCatalog 配置功能区，请先在前后端添加
+              </div>
             )}
           </div>
 

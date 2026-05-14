@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useRef } from 'react';
 import {
   AlertTriangle, CheckCircle2, Loader2, RefreshCw, Eye,
-  Undo2, ArrowRightLeft, FileText, Inbox, ChevronDown, ChevronUp, Bot, Paperclip, Upload, Sparkles
+  Undo2, ArrowRightLeft, FileText, Inbox, ChevronDown, ChevronUp, Bot, Paperclip, Upload, Sparkles,
+  Layers, ShieldCheck, XCircle
 } from 'lucide-react';
 import {
   v2GetProject, v2GetWorkspace, v2RefreshVerdicts,
@@ -11,9 +12,10 @@ import {
   v2GetStepFields, v2UpdateStepField,
   v2ListSituations, v2UpsertSituation, v2AutoDetectSituations,
   v2UploadFiles, v2AnalysisStatus,
+  v2GetFunctionalZoneVerdict,
   sourceFileUrl
 } from '../api';
-import type { ProjectRecord, ProjectFile, VerdictResult, WorkspaceV2, FileAnalysisDetail, StepFieldDto, AiConfig } from '../types';
+import type { ProjectRecord, ProjectFile, VerdictResult, WorkspaceV2, FileAnalysisDetail, StepFieldDto, AiConfig, ZoneVerdictDto } from '../types';
 import NavBar from './NavBar';
 import { canEdit } from '../auth';
 import {
@@ -252,6 +254,153 @@ function SpecRow({ spec, matched, status, onQuickUpload, uploading, readOnly }: 
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function ZoneVerdictBadge({ verdict, deltaPct }: { verdict: string; deltaPct: number | null }) {
+  const styleMap: Record<string, { bg: string; color: string; icon: JSX.Element; label: string }> = {
+    PASS:    { bg: '#dcfce7', color: '#16a34a', icon: <ShieldCheck size={11} />, label: '通过' },
+    FAIL:    { bg: '#fee2e2', color: '#dc2626', icon: <XCircle size={11} />,     label: '不通过' },
+    WARN:    { bg: '#fef3c7', color: '#b67611', icon: <AlertTriangle size={11}/>, label: '注意' },
+    UNKNOWN: { bg: '#f3f4f6', color: '#5e6c80', icon: <Eye size={11} />,         label: '未核对' },
+  };
+  const s = styleMap[verdict] ?? styleMap.UNKNOWN;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: '3px',
+      padding: '1px 7px', borderRadius: '999px',
+      background: s.bg, color: s.color, fontSize: '10px', fontWeight: 600,
+    }}>
+      {s.icon}{s.label}
+      {deltaPct != null && verdict === 'FAIL' && (
+        <span style={{ marginLeft: '3px' }}>{deltaPct > 0 ? '+' : ''}{deltaPct}%</span>
+      )}
+    </span>
+  );
+}
+
+function ZoneVerdictPanel({ data, loading, onRefresh }: {
+  data: ZoneVerdictDto[] | null;
+  loading: boolean;
+  onRefresh: () => void;
+}) {
+  if (loading && !data) {
+    return <div style={{ padding: '20px', textAlign: 'center', color: '#888', fontSize: '13px' }}>
+      <Loader2 className="spin" size={16} /> 正在按功能区查表比对…
+    </div>;
+  }
+  if (!data || data.length === 0) {
+    return <div style={{ padding: '16px', fontSize: '12px', color: '#888' }}>
+      暂无可分析数据。需要：1）项目类型对应的标准表已标注功能区；2）项目已上传材料且 AI 抽出带功能区标签的字段。
+    </div>;
+  }
+  let totalPass = 0, totalFail = 0, totalWarn = 0, totalUnknown = 0;
+  for (const z of data) for (const t of z.tables) for (const i of t.indicators) {
+    if (i.verdict === 'PASS') totalPass++;
+    else if (i.verdict === 'FAIL') totalFail++;
+    else if (i.verdict === 'WARN') totalWarn++;
+    else totalUnknown++;
+  }
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
+        <div style={{ fontSize: '13px', color: '#444' }}>
+          <strong>{data.length}</strong> 个功能区，
+          ✅ <strong style={{ color: '#16a34a' }}>{totalPass}</strong> 通过 ·
+          ❌ <strong style={{ color: '#dc2626' }}>{totalFail}</strong> 不通过 ·
+          ⚠️ <strong style={{ color: '#b67611' }}>{totalWarn}</strong> 注意 ·
+          <span style={{ color: '#5e6c80' }}> {totalUnknown}</span> 未核对
+        </div>
+        <button type="button" className="btn btn-outline" onClick={onRefresh} disabled={loading} style={{ fontSize: '12px', padding: '3px 10px' }}>
+          {loading ? <Loader2 className="spin" size={12} /> : <RefreshCw size={12} />} 重新分析
+        </button>
+      </div>
+
+      {data.map(zone => (
+        <div key={zone.functionalZone} style={{
+          marginBottom: '12px', padding: '10px 12px',
+          background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <Layers size={14} style={{ color: '#3b82f6' }} />
+            <strong style={{ fontSize: '13px' }}>{zone.functionalZone}</strong>
+            <span style={{ fontSize: '11px', color: '#888' }}>
+              · 命中 {zone.matchedTables}/{zone.totalAnnotatedTables} 张标准表
+              · 项目相关字段 {zone.projectFieldCount} 个
+            </span>
+          </div>
+
+          {zone.tables.length === 0 && (
+            <p className="quiet" style={{ margin: 0, fontSize: '12px', paddingLeft: '22px' }}>
+              {zone.totalAnnotatedTables === 0
+                ? '该功能区暂无已标注的标准表；请在「用地标准管理」标注或调用 AI 预标注。'
+                : '项目字段未提供查询键，未能命中表行（如缺少机组容量/地形类型）。'}
+            </p>
+          )}
+
+          {zone.tables.map(tbl => (
+            <div key={tbl.tableId} style={{
+              marginTop: '8px', padding: '8px 10px',
+              background: '#fafbfc', border: '1px solid #eef0f2', borderRadius: '6px',
+            }}>
+              <div style={{ fontSize: '12px', marginBottom: '6px' }}>
+                <span style={{ color: '#0d8a72', fontWeight: 600 }}>{tbl.tableCode}</span>
+                <span style={{ color: '#444', marginLeft: '6px' }}>{(tbl.tableTitle || '').replace(tbl.tableCode || '', '').trim()}</span>
+              </div>
+              {Object.keys(tbl.matchedQueryKeys).length > 0 && (
+                <div style={{ fontSize: '11px', color: '#888', marginBottom: '6px' }}>
+                  查询键：{Object.entries(tbl.matchedQueryKeys).map(([k, v]) => `${k}=${v}`).join('，')}
+                  {tbl.matchedRowIndex < 0 && <span style={{ color: '#bb4b5b', marginLeft: '4px' }}>（未命中行）</span>}
+                </div>
+              )}
+              {tbl.indicators.length === 0 ? (
+                <p className="quiet" style={{ margin: 0, fontSize: '11px' }}>该表无标注的标准值列</p>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ fontSize: '11px', borderCollapse: 'collapse', width: '100%' }}>
+                    <thead style={{ background: '#f5f8fc' }}>
+                      <tr>
+                        <th style={{ border: '1px solid #e5e7eb', padding: '4px 8px', textAlign: 'left' }}>指标</th>
+                        <th style={{ border: '1px solid #e5e7eb', padding: '4px 8px', textAlign: 'left' }}>标准值</th>
+                        <th style={{ border: '1px solid #e5e7eb', padding: '4px 8px', textAlign: 'left' }}>项目实际</th>
+                        <th style={{ border: '1px solid #e5e7eb', padding: '4px 8px', textAlign: 'left' }}>判定</th>
+                        <th style={{ border: '1px solid #e5e7eb', padding: '4px 8px', textAlign: 'left' }}>备注</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tbl.indicators.map((ind, i) => (
+                        <tr key={i}>
+                          <td style={{ border: '1px solid #e5e7eb', padding: '3px 8px' }}>{ind.indicatorName}</td>
+                          <td style={{ border: '1px solid #e5e7eb', padding: '3px 8px' }}>
+                            {ind.standardValue || <span className="quiet">—</span>}
+                            <span style={{ color: '#aaa', marginLeft: '4px', fontSize: '10px' }}>
+                              ({ind.semantic === 'upper_bound' ? '上限' : ind.semantic === 'lower_bound' ? '下限' : '精确'})
+                            </span>
+                          </td>
+                          <td style={{ border: '1px solid #e5e7eb', padding: '3px 8px' }}>
+                            {ind.actualValue ? (
+                              ind.sourceFileId ? (
+                                <button type="button" onClick={() => window.open(sourceFileUrl(ind.sourceFileId!), '_blank')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#3b82f6', font: 'inherit', textDecoration: 'underline' }}>
+                                  {ind.actualValue}
+                                </button>
+                              ) : ind.actualValue
+                            ) : <span className="quiet">未申报</span>}
+                          </td>
+                          <td style={{ border: '1px solid #e5e7eb', padding: '3px 8px' }}>
+                            <ZoneVerdictBadge verdict={ind.verdict} deltaPct={ind.deltaPct} />
+                          </td>
+                          <td style={{ border: '1px solid #e5e7eb', padding: '3px 8px', color: '#666' }}>{ind.note}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   );
 }
@@ -551,6 +700,24 @@ export default function Workbench() {
   const allCaseGroups = useMemo(() => flattenAllGroups(), []);
   const [uploadingSpec, setUploadingSpec] = useState<string | null>(null);
   const [autoDetecting, setAutoDetecting] = useState(false);
+  const [zoneVerdict, setZoneVerdict] = useState<ZoneVerdictDto[] | null>(null);
+  const [zoneVerdictLoading, setZoneVerdictLoading] = useState(false);
+  const [zoneVerdictOpen, setZoneVerdictOpen] = useState(false);
+
+  async function loadZoneVerdict() {
+    if (!id) return;
+    setZoneVerdictLoading(true);
+    setError('');
+    try {
+      const result = await v2GetFunctionalZoneVerdict(id);
+      setZoneVerdict(result);
+      setZoneVerdictOpen(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '功能区合规分析失败');
+    } finally {
+      setZoneVerdictLoading(false);
+    }
+  }
 
   async function autoDetectSituations() {
     if (!id) return;
@@ -834,6 +1001,33 @@ export default function Workbench() {
                 </>
               )}
             </div>
+          </div>
+
+          <div style={{ padding: '0 24px', marginTop: '12px' }}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => zoneVerdictOpen ? setZoneVerdictOpen(false) : loadZoneVerdict()}
+              disabled={zoneVerdictLoading}
+              style={{ fontSize: '12px' }}
+            >
+              {zoneVerdictLoading ? <Loader2 className="spin" size={13} /> : <Layers size={13} />}
+              {zoneVerdictOpen ? '收起功能区合规分析' : '功能区合规分析'}
+            </button>
+            {zoneVerdictOpen && (
+              <div style={{
+                marginTop: '10px', padding: '12px', background: '#f5f8fc',
+                border: '1px solid #dde4ee', borderRadius: '10px',
+              }}>
+                <div style={{ fontSize: '13px', color: '#142033', fontWeight: 600, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Layers size={14} /> 功能区合规分析
+                  <span style={{ fontSize: '11px', color: '#888', fontWeight: 'normal' }}>
+                    （基于已标注的标准表 + 项目抽取字段，逐项核对）
+                  </span>
+                </div>
+                <ZoneVerdictPanel data={zoneVerdict} loading={zoneVerdictLoading} onRefresh={loadZoneVerdict} />
+              </div>
+            )}
           </div>
 
           {pendingFiles.length > 0 && (

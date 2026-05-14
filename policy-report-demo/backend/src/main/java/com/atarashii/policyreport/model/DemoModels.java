@@ -30,7 +30,10 @@ public final class DemoModels {
     ) {
     }
 
-        public record ExtractedField(String label, String value, String source, double confidence, String sourceFileId) {
+        public record ExtractedField(String label, String value, String source, double confidence, String sourceFileId, String functionalZone) {
+                public ExtractedField(String label, String value, String source, double confidence, String sourceFileId) {
+                        this(label, value, source, confidence, sourceFileId, "");
+                }
     }
 
     public record PolicyCheck(String level, String title, String detail, String source) {

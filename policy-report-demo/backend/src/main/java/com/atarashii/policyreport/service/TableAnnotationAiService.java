@@ -23,11 +23,15 @@ public class TableAnnotationAiService {
 
     private final DeepSeekClient deepSeekClient;
     private final SituationCatalog situationCatalog;
+    private final FunctionalZoneCatalog zoneCatalog;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public TableAnnotationAiService(DeepSeekClient deepSeekClient, SituationCatalog situationCatalog) {
+    public TableAnnotationAiService(DeepSeekClient deepSeekClient,
+                                    SituationCatalog situationCatalog,
+                                    FunctionalZoneCatalog zoneCatalog) {
         this.deepSeekClient = deepSeekClient;
         this.situationCatalog = situationCatalog;
+        this.zoneCatalog = zoneCatalog;
     }
 
     public String generateAnnotationJson(StandardTableEntity table, String deepseekApiKey, String deepseekModel) {
@@ -63,6 +67,11 @@ public class TableAnnotationAiService {
             rowBlock.append("\n");
         }
 
+        // 拼功能区清单（按项目类型）
+        List<String> zones = zoneCatalog.zonesOf(table.getProjectType());
+        StringBuilder zoneBlock = new StringBuilder();
+        for (String z : zones) zoneBlock.append("  - ").append(z).append("\n");
+
         // 拼所有情形选项（让 AI 选适用情形）
         StringBuilder situationBlock = new StringBuilder();
         for (Map.Entry<Integer, List<SituationCatalog.CaseGroup>> entry : situationCatalog.getAllGroups().entrySet()) {
@@ -90,17 +99,22 @@ public class TableAnnotationAiService {
                 + "  - VerdictEngine 会用项目实际值跟这些列分别比对。\n\n"
                 + "所以标注时**默认应当把所有非查询键的列都纳入 valueCols**，除非某列明显不是指标（如纯描述文字、单位说明列、空列）。\n"
                 + "如果某列就是「单位」(m、hm²、km 等)，可以不归入 valueCols（它配合主键列做语义说明，不参与数值比对）。\n\n"
+                + "**关于功能区**：本项目类型由以下功能区构成：\n" + (zones.isEmpty() ? "  （未配置）\n" : zoneBlock)
+                + "请根据表名/章节判断该表服务于哪个功能区。例如风电项目，表名含\"风电机组\"→ functionalZone=\"风电机组\"，含\"集电线路\"→\"集电线路\"，含\"升压站\"→\"升压变电站及运行管理中心\"。"
+                + "若该表是项目总表/通用指标无法归到单一功能区，functionalZone 留空字符串。\n\n"
                 + "请输出：\n"
                 + "1. queryKeys：查询键列，列索引(col) + 语义名(name)。一般只有 1~2 列。\n"
                 + "2. valueCols：标准值列，列索引、语义名、semantic（upper_bound 上限 / lower_bound 下限 / exact 精确值，**用地指标默认 upper_bound**）。请尽可能完整覆盖所有指标列。\n"
                 + "3. applicableSituations：该表适用于哪些项目情形？参照下方情形选项，给出 stepNo + groupId + value。若没有明显关联，输出 []。\n"
-                + "4. notes：可选，用一两句说明表的用途。\n\n"
+                + "4. functionalZone：从上方功能区清单中精确选一个（必须完全匹配名称），或留 \"\" 表示通用。\n"
+                + "5. notes：可选，用一两句说明表的用途。\n\n"
                 + "情形选项（可选适用范围）：\n" + situationBlock + "\n"
                 + "输出严格 JSON（不要 markdown、不要解释），结构示例：\n"
                 + "{\n"
                 + "  \"queryKeys\":[{\"col\":0,\"name\":\"机组容量\"}],\n"
                 + "  \"valueCols\":[{\"col\":2,\"name\":\"直流供排水管线\",\"semantic\":\"upper_bound\"}],\n"
                 + "  \"applicableSituations\":[{\"stepNo\":6,\"groupId\":\"caseSupply\",\"value\":\"1\"}],\n"
+                + "  \"functionalZone\":\"风电机组\",\n"
                 + "  \"notes\":\"...\"\n"
                 + "}\n\n"
                 + "请直接输出 JSON：";

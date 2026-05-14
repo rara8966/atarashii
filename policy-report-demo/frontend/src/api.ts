@@ -24,6 +24,7 @@ import type {
   ProjectTypeDto,
   StandardItemDto,
   StandardTableDto,
+  ZoneVerdictDto,
 } from './types';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
@@ -334,6 +335,10 @@ export function v2AutoDetectSituations(projectId: string, deepseekApiKey: string
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ deepseekApiKey, deepseekModel }),
   });
+}
+
+export function v2GetFunctionalZoneVerdict(projectId: string): Promise<ZoneVerdictDto[]> {
+  return request<ZoneVerdictDto[]>(`/api/v2/projects/${projectId}/functional-zone-verdict`);
 }
 
 // ── 用地标准管理 ──

@@ -36,6 +36,7 @@ public class DocumentAnalysisService {
     private final WorkspaceStateService workspaceStateService;
     private final UploadedFileService uploadedFileService;
     private final AppProperties properties;
+    private final FunctionalZoneCatalog zoneCatalog;
 
     public DocumentAnalysisService(TikaDocumentParser parser,
                                    PolicyKnowledgeService policyKnowledgeService,
@@ -45,7 +46,8 @@ public class DocumentAnalysisService {
                                    OcrService ocrService,
                                    WorkspaceStateService workspaceStateService,
                                    UploadedFileService uploadedFileService,
-                                   AppProperties properties) {
+                                   AppProperties properties,
+                                   FunctionalZoneCatalog zoneCatalog) {
         this.parser = parser;
         this.policyKnowledgeService = policyKnowledgeService;
         this.ollamaClient = ollamaClient;
@@ -55,6 +57,7 @@ public class DocumentAnalysisService {
         this.workspaceStateService = workspaceStateService;
         this.uploadedFileService = uploadedFileService;
         this.properties = properties;
+        this.zoneCatalog = zoneCatalog;
     }
 
     public DocumentAnalysisResponse analyze(MultipartFile file, String targetStep, String fallbackStep, AiConfig aiConfig) {
@@ -116,9 +119,11 @@ public class DocumentAnalysisService {
 
         String documentType = detectDocumentType(parsed.fileName(), text);
         String stepId = resolveStepId(targetStep, guessStep(documentType, parsed.fileName(), text), fallbackStep);
+        // 提前取 projectType 给 AI 抽字段，让它能给每个字段标 functionalZone
+        String projectTypeForExtraction = workspaceStateService.getProjectType(projectId);
         List<ExtractedField> regexFields = isStandardLibraryDocument(documentType) ? List.of() : extractFields(text);
-        List<ExtractedField> aiFields = isStandardLibraryDocument(documentType) ? List.of() : extractFieldsViaAi(text, aiConfig);
-        List<ExtractedField> fields = attachSourceFile(mergeFields(regexFields, aiFields), fileId);
+        List<ExtractedField> aiFields = isStandardLibraryDocument(documentType) ? List.of() : extractFieldsViaAi(text, aiConfig, projectTypeForExtraction);
+        List<ExtractedField> fields = attachSourceFileImpl(mergeFields(regexFields, aiFields), fileId);
         List<PolicyCheck> checks = runPolicyChecks(text, stepId, documentType, fields);
         addOcrCheck(checks, ocrResult);
 
@@ -237,10 +242,15 @@ public class DocumentAnalysisService {
      * 用 DeepSeek 抽取尽可能多的结构化字段，与 regex 抽取结果合并。
      * 仅当 provider=deepseek 且填了 API Key 时调用，否则返回空列表。
      */
-    private List<ExtractedField> extractFieldsViaAi(String text, AiConfig aiConfig) {
+    private List<ExtractedField> extractFieldsViaAi(String text, AiConfig aiConfig, String projectType) {
         if (text == null || text.isBlank()) return List.of();
         if (aiConfig == null || !"deepseek".equalsIgnoreCase(aiConfig.provider())) return List.of();
         if (aiConfig.deepseekApiKey() == null || aiConfig.deepseekApiKey().isBlank()) return List.of();
+
+        // 拼项目类型的功能区清单（用于让 AI 给每个字段标功能区归属）
+        List<String> zones = zoneCatalog == null ? List.of() : zoneCatalog.zonesOf(projectType == null ? "" : projectType);
+        StringBuilder zoneBlock = new StringBuilder();
+        for (String z : zones) zoneBlock.append("  - ").append(z).append("\n");
 
         String snippet = text.length() > 8_000 ? text.substring(0, 8_000) : text;
         String prompt = "你是建设用地报批材料字段抽取专家。请从以下文本中尽量多地抽取所有可结构化字段。\n\n"
@@ -252,9 +262,17 @@ public class DocumentAnalysisService {
                 + "- 财务/审批：核准文号、立项文号、有偿使用费、补偿金额、社保资金\n"
                 + "- 评估结论：地质灾害评估等级、压覆矿产结论、社会稳定风险等级、生态影响结论\n"
                 + "- 其他规则字段：林地批复编号、占补平衡情况、安置方式、听证情况\n\n"
+                + (zones.isEmpty()
+                    ? ""
+                    : "**关于功能区**：本项目类型由以下功能区构成：\n" + zoneBlock
+                        + "请尽可能为每个抽出的字段判断它属于哪个功能区（VerdictEngine 会按功能区做查表比对）。"
+                        + "比如风电项目的「集电线路用地面积」→ functionalZone=\"集电线路\"，「升压站建设用地」→\"升压变电站及运行管理中心\"。"
+                        + "项目元信息（项目名称、文号、日期等）属于全局，functionalZone 留 \"\"。\n\n")
                 + "要求：\n"
                 + "1. 仅基于文本中实际出现的内容抽取，不要编造\n"
-                + "2. 输出严格的 JSON 数组，每元素 {\"label\": \"字段名（4-12字）\", \"value\": \"字段值（保留原文格式与单位）\"}\n"
+                + "2. 输出严格的 JSON 数组，每元素 {\"label\": \"字段名（4-12字）\", \"value\": \"字段值（保留原文格式与单位）\""
+                + (zones.isEmpty() ? "" : ", \"functionalZone\": \"功能区名或空字符串\"")
+                + "}\n"
                 + "3. 不要输出 JSON 之外的内容（不要 markdown、不要解释）\n"
                 + "4. 文本中没有的字段不要硬塞\n"
                 + "5. 数值带单位（如\"123.45 公顷\"）\n"
@@ -276,7 +294,10 @@ public class DocumentAnalysisService {
                 String label = String.valueOf(labelObj).trim();
                 String value = String.valueOf(valueObj).trim();
                 if (label.isBlank() || value.isBlank()) continue;
-                out.add(new ExtractedField(label, value, "DeepSeek 抽取", 0.85, null));
+                String zone = "";
+                Object zoneObj = row.get("functionalZone");
+                if (zoneObj != null) zone = String.valueOf(zoneObj).trim();
+                out.add(new ExtractedField(label, value, "DeepSeek 抽取", 0.85, null, zone));
             }
             return out;
         } catch (Exception ignored) {
@@ -375,9 +396,9 @@ public class DocumentAnalysisService {
         return km.stripTrailingZeros().toPlainString();
     }
 
-    private List<ExtractedField> attachSourceFile(List<ExtractedField> fields, String fileId) {
+    private List<ExtractedField> attachSourceFileImpl(List<ExtractedField> fields, String fileId) {
         return fields.stream()
-                .map(field -> new ExtractedField(field.label(), field.value(), field.source(), field.confidence(), fileId))
+                .map(field -> new ExtractedField(field.label(), field.value(), field.source(), field.confidence(), fileId, field.functionalZone()))
                 .toList();
     }
 
