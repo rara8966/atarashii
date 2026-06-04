@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'" />
+  <title>软件激活</title>
+  <style>
+    body {
+      font-family: "Microsoft YaHei", "微软雅黑", sans-serif;
+      margin: 0; padding: 34px 36px; background: #f5f6f8; color: #222;
+      user-select: none;
+    }
+    h2 { margin: 0 0 6px; font-size: 19px; }
+    p.sub { margin: 0 0 22px; color: #888; font-size: 13px; }
+    label { font-size: 13px; color: #555; }
+    input {
+      width: 100%; box-sizing: border-box; margin-top: 6px; padding: 11px;
+      font-size: 15px; letter-spacing: 1px; border: 1px solid #ccc; border-radius: 6px;
+      text-transform: uppercase;
+    }
+    input:focus { outline: none; border-color: #2563eb; }
+    button {
+      margin-top: 18px; width: 100%; padding: 12px; font-size: 15px;
+      color: #fff; background: #2563eb; border: 0; border-radius: 6px; cursor: pointer;
+    }
+    button:disabled { background: #9bb5e8; cursor: default; }
+    .msg { margin-top: 16px; font-size: 13px; min-height: 20px; line-height: 1.5; }
+    .err { color: #d33; }
+    .ok { color: #1a9c4e; }
+    .tip { margin-top: 24px; font-size: 12px; color: #aaa; }
+  </style>
+</head>
+<body>
+  <h2>软件激活</h2>
+  <p class="sub">建设用地报批审查报告智能生成系统</p>
+
+  <label for="key">请输入授权码</label>
+  <input id="key" placeholder="PRD-XXXX-XXXX-XXXX-XXXX" autocomplete="off" autofocus />
+
+  <button id="btn">激 活</button>
+  <div class="msg" id="msg"></div>
+
+  <p class="tip">授权码由供应方提供。激活需联网，仅首次启动需要。</p>
+
+  <script>
+    var keyInput = document.getElementById('key');
+    var btn = document.getElementById('btn');
+    var msg = document.getElementById('msg');
+
+    function setMsg(text, cls) {
+      msg.textContent = text;
+      msg.className = 'msg' + (cls ? ' ' + cls : '');
+    }
+
+    async function doActivate() {
+      var key = keyInput.value.trim();
+      if (!key) {
+        setMsg('请输入授权码', 'err');
+        return;
+      }
+      btn.disabled = true;
+      setMsg('正在激活，请稍候...');
+      var r = await window.activationApi.activate(key);
+      if (r && r.ok) {
+        setMsg('激活成功，正在启动软件...', 'ok');
+        setTimeout(function () { window.activationApi.proceed(key); }, 800);
+      } else {
+        btn.disabled = false;
+        setMsg((r && r.message) ? r.message : '激活失败，请重试', 'err');
+      }
+    }
+
+    btn.addEventListener('click', doActivate);
+    keyInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') doActivate();
+    });
+  </script>
+</body>
+</html>

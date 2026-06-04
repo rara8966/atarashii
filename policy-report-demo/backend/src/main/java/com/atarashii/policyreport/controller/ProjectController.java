@@ -8,7 +8,6 @@ import com.atarashii.policyreport.persistence.ProjectRecordEntity;
 import com.atarashii.policyreport.persistence.StepVerdictEntity;
 import com.atarashii.policyreport.service.AsyncAnalysisService;
 import com.atarashii.policyreport.service.PreviewService;
-import com.atarashii.policyreport.service.FunctionalZoneVerdictService;
 import com.atarashii.policyreport.service.ProjectFileService;
 import com.atarashii.policyreport.service.ProjectRecordService;
 import com.atarashii.policyreport.service.ProjectSituationService;
@@ -17,6 +16,7 @@ import com.atarashii.policyreport.service.ReportGenerationService;
 import com.atarashii.policyreport.service.SituationAutoDetectService;
 import com.atarashii.policyreport.service.StepFieldService;
 import com.atarashii.policyreport.service.VerdictEngine;
+import com.atarashii.policyreport.service.verdict.ZoneVerdictApi;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -42,7 +42,7 @@ public class ProjectController {
     private final StepFieldService stepFieldService;
     private final ProjectSituationService situationService;
     private final SituationAutoDetectService situationAutoDetectService;
-    private final FunctionalZoneVerdictService zoneVerdictService;
+    private final ZoneVerdictApi zoneVerdictService;
 
     public ProjectController(ProjectRecordService projectRecordService,
                              ProjectFileService projectFileService,
@@ -53,7 +53,7 @@ public class ProjectController {
                              StepFieldService stepFieldService,
                              ProjectSituationService situationService,
                              SituationAutoDetectService situationAutoDetectService,
-                             FunctionalZoneVerdictService zoneVerdictService) {
+                             ZoneVerdictApi zoneVerdictService) {
         this.projectRecordService = projectRecordService;
         this.projectFileService = projectFileService;
         this.verdictEngine = verdictEngine;
@@ -254,7 +254,7 @@ public class ProjectController {
 
     /** 功能区合规分析：按功能区拿对应已标注的标准表，跟项目字段做查表 + 数值比对。 */
     @GetMapping("/{id}/functional-zone-verdict")
-    public List<FunctionalZoneVerdictService.ZoneVerdict> functionalZoneVerdict(@PathVariable String id) {
+    public List<ZoneVerdictApi.ZoneVerdict> functionalZoneVerdict(@PathVariable String id) {
         return zoneVerdictService.verdictForProject(id);
     }
 

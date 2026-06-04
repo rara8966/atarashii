@@ -8,9 +8,14 @@ import com.atarashii.policyreport.persistence.ProjectRecordEntity;
 import com.atarashii.policyreport.persistence.ProjectRecordRepository;
 import com.atarashii.policyreport.persistence.StandardTableEntity;
 import com.atarashii.policyreport.persistence.StandardTableRepository;
+import com.atarashii.policyreport.service.verdict.ZoneVerdictApi;
+import com.atarashii.policyreport.service.verdict.ZoneVerdictApi.IndicatorVerdict;
+import com.atarashii.policyreport.service.verdict.ZoneVerdictApi.TableVerdict;
+import com.atarashii.policyreport.service.verdict.ZoneVerdictApi.ZoneVerdict;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -44,7 +49,8 @@ import java.util.regex.Pattern;
  * 数值比对：value 中第一个数字串作为数值；semantic=upper_bound 表示项目实际 ≤ 标准 = 通过。
  */
 @Service
-public class FunctionalZoneVerdictService {
+@Profile("!client")  // 服务器/本地构建启用真算法；客户端构建用 RemoteZoneVerdictService 取代
+public class FunctionalZoneVerdictService implements ZoneVerdictApi {
 
     private final ProjectRecordRepository projectRepository;
     private final ProjectFileRepository fileRepository;
@@ -64,6 +70,7 @@ public class FunctionalZoneVerdictService {
         this.tableRepository = tableRepository;
     }
 
+    @Override
     public List<ZoneVerdict> verdictForProject(String projectId) {
         ProjectRecordEntity project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + projectId));
@@ -412,31 +419,6 @@ public class FunctionalZoneVerdictService {
     private record ValueCol(int col, String name, String semantic) {}
     private record ProjectField(String label, String value, String functionalZone, String sourceFileId, String sourceFileName) {}
 
-    public record IndicatorVerdict(
-        String indicatorName,
-        String standardValue,
-        String actualValue,
-        String semantic,
-        String verdict,    // PASS / FAIL / WARN / UNKNOWN
-        Double deltaPct,
-        String note,
-        String sourceFileId
-    ) {}
-
-    public record TableVerdict(
-        String tableId,
-        String tableCode,
-        String tableTitle,
-        Map<String, String> matchedQueryKeys,
-        int matchedRowIndex,
-        List<IndicatorVerdict> indicators
-    ) {}
-
-    public record ZoneVerdict(
-        String functionalZone,
-        int matchedTables,
-        int totalAnnotatedTables,
-        int projectFieldCount,
-        List<TableVerdict> tables
-    ) {}
+    // IndicatorVerdict / TableVerdict / ZoneVerdict 已迁至 ZoneVerdictApi 接口，
+    // 以便客户端构建剔除本类后仍能反序列化服务器返回的判定结果。
 }

@@ -1,6 +1,8 @@
 package com.atarashii.policyreport.config;
 
 import com.atarashii.policyreport.security.JwtFilter;
+import com.atarashii.policyreport.security.LicenseFilter;
+import com.atarashii.policyreport.service.LicenseService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
@@ -15,9 +17,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig {
     private final JwtFilter jwtFilter;
+    private final LicenseProperties licenseProperties;
+    private final LicenseService licenseService;
 
-    public SecurityConfig(JwtFilter jwtFilter) {
+    public SecurityConfig(JwtFilter jwtFilter,
+                          LicenseProperties licenseProperties,
+                          LicenseService licenseService) {
         this.jwtFilter = jwtFilter;
+        this.licenseProperties = licenseProperties;
+        this.licenseService = licenseService;
     }
 
     @Bean
@@ -31,6 +39,9 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            // 授权网关：放在 JwtFilter 之后，命中受保护路径且授权无效时直接 403。
+            // license.enabled=false 时 shouldNotFilter 直接放行，行为与改造前一致。
+            .addFilterAfter(new LicenseFilter(licenseProperties, licenseService), JwtFilter.class)
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, authException) -> {
                     response.setStatus(401);

@@ -20,6 +20,9 @@
         <java.version>17</java.version>
         <tika.version>2.9.2</tika.version>
         <pdfbox.version>2.0.31</pdfbox.version>
+        <!-- 资源过滤期填入 application.yml 的 @activatedProfile@。
+             默认构建=default；client profile 下被覆盖为 client。 -->
+        <activatedProfile>default</activatedProfile>
     </properties>
 
     <dependencies>
@@ -38,6 +41,13 @@
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- 客户端构建用的内嵌库：客户机零安装，数据存本地 data/ 目录。
+             服务器构建用 MySQL，H2 在那边不被引用，仅多 ~2MB。 -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -101,4 +111,36 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!--
+          客户端构建：用 "mvn -P client clean package" 打包。
+          物理剔除功能区判定算法源码（FunctionalZoneVerdictService），
+          客户端 jar 内不含该算法，反编译也拿不到，只能调云端。
+          该 profile 同时把 activatedProfile 设为 client，构建期写进
+          application.yml 的 spring.profiles.active，客户端 jar 自动走
+          RemoteZoneVerdictService 云下发，无需额外启动参数。
+          默认构建（不带 -P client）= 服务器/本地构建，包含完整算法。
+        -->
+        <profile>
+            <id>client</id>
+            <properties>
+                <!-- 客户端构建：让 application.yml 的 spring.profiles.active 变成 client -->
+                <activatedProfile>client</activatedProfile>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/service/FunctionalZoneVerdictService.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

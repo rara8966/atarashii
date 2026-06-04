@@ -1,0 +1,22 @@
+# 仅在 client profile（客户端构建，-P client）下生效。
+# 把数据源从 MySQL 覆盖为本地 H2 内嵌文件库：客户机零安装，数据落在运行目录 data/ 下。
+# MODE=MySQL 让 H2 兼容 MySQL 语法，沿用为 MySQL 设计的实体定义。
+spring:
+  datasource:
+    # NON_KEYWORDS=VALUE：实体里有名为 value 的列（MySQL 允许，H2 默认保留），解除保留才能建表
+    url: jdbc:h2:file:./data/atarashii;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL;NON_KEYWORDS=VALUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ''
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+app:
+  # 客户端本地登录用的 JWT 密钥。仅用于客户机本地的会话签名，与云端服务器无关，
+  # 固定内置即可（原 application-local.yml 提供，剥离后须在此补回，否则 JwtUtil 启动崩溃）。
+  jwt-secret: c4f1a9e2b7d83056e1fa4c9b20d7e85f6a3b1c8d9e0f2a4b6c8d0e1f3a5b7c9d
+  # 云端服务器地址，所有客户固定一致；授权码 license-key 由 CLOUD_LICENSE_KEY 环境变量按客户注入。
+  cloud-client:
+    base-url: https://policy.xieyuchen.xyz

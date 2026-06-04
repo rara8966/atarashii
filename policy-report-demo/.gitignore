@@ -16,3 +16,11 @@ dist-package/
 
 # 本地敏感配置（密钥/密码），不提交
 backend/src/main/resources/application-local.yml
+
+# 授权管理令牌 / 本地保存的授权码，绝不提交（凡是 tools/ 下的 .txt 一律屏蔽）
+tools/*.txt
+
+# 客户端打包产物
+client-electron/node_modules/
+client-electron/runtime/
+client-electron/dist/

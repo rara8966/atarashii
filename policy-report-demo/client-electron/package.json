@@ -1,0 +1,49 @@
+{
+  "name": "policy-report-client",
+  "version": "2.0.0",
+  "description": "建设用地报批审查报告智能生成系统 客户端",
+  "main": "main.js",
+  "author": "atarashii",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.atarashii.policyreport.client",
+    "productName": "建设用地报批审查系统",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "activation.html",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "runtime/jre",
+        "to": "jre"
+      },
+      {
+        "from": "runtime/policy-report-client.jar",
+        "to": "policy-report-client.jar"
+      }
+    ],
+    "asar": true,
+    "win": {
+      "target": "nsis",
+      "artifactName": "建设用地报批审查系统-安装版-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "建设用地报批审查系统"
+    }
+  }
+}

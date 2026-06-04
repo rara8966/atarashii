@@ -10,6 +10,10 @@ server:
     keep-alive-timeout: 310000
 
 spring:
+  # 构建期由 Maven 填充：默认构建=default（服务器/本地，判定引擎在本机）；
+  # mvn -Pclient 构建=client（客户端，判定走云端 RemoteZoneVerdictService）。
+  profiles:
+    active: '@activatedProfile@'
   config:
     import: optional:application-local.yml
   datasource:
@@ -33,6 +37,11 @@ spring:
 app:
   jwt-secret: ${JWT_SECRET:}
   jwt-expiration-ms: 2592000000
+  license:
+    # 本地/老演示模式保持 false（不校验授权）；服务器生产环境用环境变量 LICENSE_ENABLED=true 打开。
+    enabled: ${LICENSE_ENABLED:false}
+    # 管理员令牌，签发/吊销授权用；留空则管理接口一律拒绝。生产环境必须用环境变量注入。
+    admin-token: ${LICENSE_ADMIN_TOKEN:}
   policy-card-path: ../../2025重大项目用地政策明白卡.pdf
   template-policy-path: ../../自然资源部办公厅关于进一步规范建设用地报批文本格式的函（自然资办函〔2024〕1009号）.pdf
   ollama-base-url: http://localhost:11434
@@ -52,3 +61,11 @@ app:
   ocr-tesseract-data-path:
   ocr-tesseract-page-seg-mode: 6
   ocr-tesseract-timeout-seconds: 90
+
+  # 客户端构建（client profile）连云配置。服务器/本地构建不读这一段。
+  # 真实值由客户端的 application-local.yml 或环境变量注入，不要写死在仓库里。
+  cloud-client:
+    base-url: ${CLOUD_BASE_URL:}
+    license-key: ${CLOUD_LICENSE_KEY:}
+    machine-id: ${CLOUD_MACHINE_ID:}
+    timeout-seconds: 30
