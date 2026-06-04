@@ -136,7 +136,4 @@ cd frontend
 npm run dev   # http://localhost:5173, /api 已代理到 8080
 ```
 
-## 安全注意
 
-- `application-local.yml`、`tools/*.txt`、构建产物（target/、dist/、runtime/）均已纳入 gitignore。
-- 提交前请用 `git diff --cached` 复核改动，密钥 / 授权码绝不入库。
