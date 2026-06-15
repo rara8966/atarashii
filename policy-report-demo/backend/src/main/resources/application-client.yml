@@ -17,6 +17,10 @@ app:
   # 客户端本地登录用的 JWT 密钥。仅用于客户机本地的会话签名，与云端服务器无关，
   # 固定内置即可（原 application-local.yml 提供，剥离后须在此补回，否则 JwtUtil 启动崩溃）。
   jwt-secret: c4f1a9e2b7d83056e1fa4c9b20d7e85f6a3b1c8d9e0f2a4b6c8d0e1f3a5b7c9d
+  # 功能区判定走本地算法（false）：项目数据在客户机本地 H2，本地直接判定，不依赖云端。
+  # 若改为 true，则走 RemoteZoneVerdictService 调云端 —— 但云端需要能查到对应项目数据才行。
+  zone-verdict:
+    remote: false
   # 云端服务器地址，所有客户固定一致；授权码 license-key 由 CLOUD_LICENSE_KEY 环境变量按客户注入。
   cloud-client:
     base-url: https://policy.xieyuchen.xyz

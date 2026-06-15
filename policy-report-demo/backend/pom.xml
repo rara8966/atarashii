@@ -128,19 +128,13 @@
                 <!-- 客户端构建：让 application.yml 的 spring.profiles.active 变成 client -->
                 <activatedProfile>client</activatedProfile>
             </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-compiler-plugin</artifactId>
-                        <configuration>
-                            <excludes>
-                                <exclude>**/service/FunctionalZoneVerdictService.java</exclude>
-                            </excludes>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
+            <!--
+              注：功能区判定算法（FunctionalZoneVerdictService）原先在客户端构建时被
+              物理剔除、改走云端 RemoteZoneVerdictService。但客户端项目数据在本地 H2，
+              云端按 projectId 查不到 → 500。现客户端改为本地判定（app.zone-verdict.remote=false），
+              故不再剔除该源文件。如需恢复"算法仅在云端"，在此 profile 重新加 compiler exclude
+              并把 application-client.yml 的 app.zone-verdict.remote 设为 true。
+            -->
         </profile>
     </profiles>
 </project>

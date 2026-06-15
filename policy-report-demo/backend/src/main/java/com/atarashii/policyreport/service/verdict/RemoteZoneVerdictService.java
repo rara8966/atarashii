@@ -3,6 +3,7 @@ package com.atarashii.policyreport.service.verdict;
 import com.atarashii.policyreport.config.CloudClientProperties;
 import com.atarashii.policyreport.security.MachineFingerprint;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -25,6 +26,9 @@ import java.util.List;
  */
 @Service
 @Profile("client")
+// 仅当显式开启 app.zone-verdict.remote=true 时才走云端。默认（false/缺失）由本地
+// FunctionalZoneVerdictService 接管，二者互斥，避免同时存在两个 ZoneVerdictApi Bean。
+@ConditionalOnProperty(name = "app.zone-verdict.remote", havingValue = "true")
 public class RemoteZoneVerdictService implements ZoneVerdictApi {
 
     private static final ParameterizedTypeReference<List<ZoneVerdict>> ZONE_LIST =

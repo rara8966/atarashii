@@ -15,7 +15,7 @@ import com.atarashii.policyreport.service.verdict.ZoneVerdictApi.ZoneVerdict;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -49,7 +49,9 @@ import java.util.regex.Pattern;
  * 数值比对：value 中第一个数字串作为数值；semantic=upper_bound 表示项目实际 ≤ 标准 = 通过。
  */
 @Service
-@Profile("!client")  // 服务器/本地构建启用真算法；客户端构建用 RemoteZoneVerdictService 取代
+// 本地判定算法：默认生效（属性缺失或 =false）。仅当 app.zone-verdict.remote=true 时
+// 让位给 RemoteZoneVerdictService 走云端。客户端构建默认走本地，避免云端按 projectId 查不到本地项目而 500。
+@ConditionalOnProperty(name = "app.zone-verdict.remote", havingValue = "false", matchIfMissing = true)
 public class FunctionalZoneVerdictService implements ZoneVerdictApi {
 
     private final ProjectRecordRepository projectRepository;
