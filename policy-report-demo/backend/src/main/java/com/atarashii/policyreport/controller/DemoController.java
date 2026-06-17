@@ -13,6 +13,7 @@ import com.atarashii.policyreport.model.DemoModels.SituationUpdateRequest;
 import com.atarashii.policyreport.model.DemoModels.SynthesizeRequest;
 import com.atarashii.policyreport.model.DemoModels.SynthesizeResponse;
 import com.atarashii.policyreport.model.DemoModels.WorkspaceState;
+import com.atarashii.policyreport.service.DeepSeekClient;
 import com.atarashii.policyreport.service.DemoProjectService;
 import com.atarashii.policyreport.service.DocumentAnalysisService;
 import com.atarashii.policyreport.service.OllamaClient;
@@ -49,6 +50,7 @@ public class DemoController {
     private final PolicyKnowledgeService policyKnowledgeService;
     private final UploadedFileService uploadedFileService;
     private final AppProperties properties;
+    private final DeepSeekClient deepSeekClient;
 
     public DemoController(DemoProjectService demoProjectService,
                           DocumentAnalysisService documentAnalysisService,
@@ -57,7 +59,8 @@ public class DemoController {
                           WorkspaceStateService workspaceStateService,
                           PolicyKnowledgeService policyKnowledgeService,
                           UploadedFileService uploadedFileService,
-                          AppProperties properties) {
+                          AppProperties properties,
+                          DeepSeekClient deepSeekClient) {
         this.demoProjectService = demoProjectService;
         this.documentAnalysisService = documentAnalysisService;
         this.reportGenerationService = reportGenerationService;
@@ -66,11 +69,31 @@ public class DemoController {
         this.policyKnowledgeService = policyKnowledgeService;
         this.uploadedFileService = uploadedFileService;
         this.properties = properties;
+        this.deepSeekClient = deepSeekClient;
     }
 
     @GetMapping("/health")
     public String health() {
         return "ok";
+    }
+
+    /**
+     * 测试 DeepSeek API Key 连通性：发一条极短 prompt，根据是否拿到有效回复判定 key 可用。
+     * 前端"AI 配置"和"新建项目"引导用它在保存前先验证 key。
+     */
+    @PostMapping("/ai/test-key")
+    public java.util.Map<String, Object> testAiKey(@RequestBody java.util.Map<String, String> body) {
+        String apiKey = body.getOrDefault("deepseekApiKey", "");
+        String model = body.getOrDefault("deepseekModel", "");
+        if (apiKey == null || apiKey.isBlank()) {
+            return java.util.Map.of("ok", false, "message", "请先填写 DeepSeek API Key");
+        }
+        DeepSeekClient.GenerationResult result = deepSeekClient.generate("请只回复两个字：正常", apiKey, model);
+        String modelName = result.model() == null ? "deepseek-chat" : result.model();
+        if (result.usedModel()) {
+            return java.util.Map.of("ok", true, "message", "连通正常（" + modelName + "）");
+        }
+        return java.util.Map.of("ok", false, "message", result.text() == null ? "连接失败" : result.text());
     }
 
     @GetMapping("/demo/project")

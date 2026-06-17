@@ -3,25 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import {
   Upload, FileText, RefreshCw, Loader2, AlertTriangle, CheckCircle2,
   ChevronDown, ChevronUp, Power, FileSearch, Trash2, X, Table as TableIcon,
-  Sparkles, Save, RotateCcw, Tag, CheckCircle as CheckIcon
+  Sparkles, Tag, CheckCircle as CheckIcon
 } from 'lucide-react';
 import {
   listProjectTypes, toggleProjectType, listStandardItems,
   uploadStandardDocx, clearStandardItems,
   listStandardTables, uploadStandardTablesDocx, clearStandardTables,
-  saveTableAnnotation, aiPrelabelTable, aiPrelabelAllTables,
+  aiPrelabelAllTables,
 } from '../api';
 import type { ProjectTypeDto, StandardItemDto, StandardTableDto, TableAnnotation } from '../types';
-import { CASE_GROUPS, zonesOf } from '../materialSpecs';
+import { aiConfigHasKey, readAiConfig } from '../aiConfig';
 import NavBar from './NavBar';
-
-const AI_CONFIG_KEY = 'policy-report-demo-ai-config';
-function readAiConfig() {
-  try { return JSON.parse(localStorage.getItem(AI_CONFIG_KEY) || '{}'); } catch { return {}; }
-}
-
-type ColState = 'none' | 'key' | 'value';
-type Semantic = 'upper_bound' | 'lower_bound' | 'exact';
+import SettingsModal from './SettingsModal';
+import AnnotationDrawer from './AnnotationDrawer';
+import ConfirmModal from './ConfirmModal';
 
 function parseAnnotation(json: string): TableAnnotation | null {
   if (!json) return null;
@@ -39,431 +34,50 @@ function parseAnnotation(json: string): TableAnnotation | null {
   } catch { return null; }
 }
 
-function parseJsonGrid(json: string): string[][] {
-  if (!json) return [];
-  try {
-    const v = JSON.parse(json);
-    if (!Array.isArray(v)) return [];
-    return v.map(row => Array.isArray(row) ? row.map(c => c == null ? '' : String(c)) : []);
-  } catch { return []; }
-}
-
-function StandardTableView({ table, onUpdate, onError, onNotice }: {
+/** 精简表格行：只显示表名 + 状态徽章 + 操作按钮；点「标注」打开全屏抽屉。 */
+function StandardTableRow({ table, onOpen }: {
   table: StandardTableDto;
-  onUpdate: (t: StandardTableDto) => void;
-  onError: (msg: string) => void;
-  onNotice: (msg: string) => void;
+  onOpen: (t: StandardTableDto) => void;
 }) {
-  const headers = parseJsonGrid(table.headersJson);
-  const rows = parseJsonGrid(table.rowsJson);
-  const colCount = headers[0]?.length ?? (rows[0]?.length ?? 0);
-
-  // 把后端 annotation_json 还原为列状态 map
-  const initialAnnotation = parseAnnotation(table.annotationJson);
-  const initialColState: Record<number, ColState> = {};
-  const initialColName: Record<number, string> = {};
-  const initialColSemantic: Record<number, Semantic> = {};
-  if (initialAnnotation) {
-    for (const k of initialAnnotation.queryKeys) {
-      initialColState[k.col] = 'key';
-      initialColName[k.col] = k.name;
-    }
-    for (const v of initialAnnotation.valueCols) {
-      initialColState[v.col] = 'value';
-      initialColName[v.col] = v.name;
-      initialColSemantic[v.col] = v.semantic ?? 'upper_bound';
-    }
-  }
-  const initialSituations = initialAnnotation?.applicableSituations ?? [];
-  const initialNotes = initialAnnotation?.notes ?? '';
-  const initialZone = initialAnnotation?.functionalZone ?? '';
-
-  const [editing, setEditing] = useState(false);
-  const [colState, setColState] = useState<Record<number, ColState>>(initialColState);
-  const [colName, setColName] = useState<Record<number, string>>(initialColName);
-  const [colSemantic, setColSemantic] = useState<Record<number, Semantic>>(initialColSemantic);
-  const [situations, setSituations] = useState<Array<{ stepNo: number; groupId: string; value: string }>>(initialSituations);
-  const [notes, setNotes] = useState(initialNotes);
-  const [functionalZone, setFunctionalZone] = useState(initialZone);
-  const [saving, setSaving] = useState(false);
-  const [prelabeling, setPrelabeling] = useState(false);
-
-  const zoneOptions = zonesOf(table.projectType);
-
-  function reload(fresh: StandardTableDto) {
-    const ann = parseAnnotation(fresh.annotationJson);
-    const cs: Record<number, ColState> = {};
-    const cn: Record<number, string> = {};
-    const csem: Record<number, Semantic> = {};
-    if (ann) {
-      for (const k of ann.queryKeys) { cs[k.col] = 'key'; cn[k.col] = k.name; }
-      for (const v of ann.valueCols) { cs[v.col] = 'value'; cn[v.col] = v.name; csem[v.col] = v.semantic ?? 'upper_bound'; }
-    }
-    setColState(cs);
-    setColName(cn);
-    setColSemantic(csem);
-    setSituations(ann?.applicableSituations ?? []);
-    setNotes(ann?.notes ?? '');
-    setFunctionalZone(ann?.functionalZone ?? '');
-  }
-
-  function cycleCol(c: number) {
-    setColState(prev => {
-      const cur = prev[c] ?? 'none';
-      const next: ColState = cur === 'none' ? 'key' : cur === 'key' ? 'value' : 'none';
-      const updated = { ...prev, [c]: next };
-      if (next === 'none') {
-        const nn = { ...colName }; delete nn[c]; setColName(nn);
-        const ns = { ...colSemantic }; delete ns[c]; setColSemantic(ns);
-      } else if (!colName[c] && headers[0]?.[c]) {
-        setColName(n => ({ ...n, [c]: headers[0][c] }));
-      }
-      return updated;
-    });
-  }
-
-  function buildAnnotation(): TableAnnotation {
-    const queryKeys: TableAnnotation['queryKeys'] = [];
-    const valueCols: TableAnnotation['valueCols'] = [];
-    for (let c = 0; c < colCount; c++) {
-      const st = colState[c];
-      const name = (colName[c] ?? headers[0]?.[c] ?? `列${c}`).trim();
-      if (st === 'key') queryKeys.push({ col: c, name });
-      else if (st === 'value') valueCols.push({ col: c, name, semantic: colSemantic[c] ?? 'upper_bound' });
-    }
-    return { queryKeys, valueCols, applicableSituations: situations, functionalZone, notes, source: 'human' };
-  }
-
-  async function save() {
-    setSaving(true);
-    try {
-      const ann = buildAnnotation();
-      const fresh = await saveTableAnnotation(table.id, ann);
-      onUpdate(fresh);
-      reload(fresh);
-      onNotice('标注已保存');
-      setEditing(false);
-    } catch (err) {
-      onError(err instanceof Error ? err.message : '保存失败');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function aiPrelabel() {
-    const cfg = readAiConfig();
-    if (!cfg.deepseekApiKey) { onError('请先在 NavBar「AI 配置」中填写 DeepSeek API Key'); return; }
-    setPrelabeling(true);
-    try {
-      const fresh = await aiPrelabelTable(table.id, cfg.deepseekApiKey, cfg.deepseekModel || 'deepseek-chat');
-      onUpdate(fresh);
-      reload(fresh);
-      onNotice('AI 已预标注，请人工复核后点击「保存」确认');
-      setEditing(true);
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'AI 预标注失败');
-    } finally {
-      setPrelabeling(false);
-    }
-  }
-
-  function resetEdits() {
-    reload(table);
-    onNotice('已重置为上次保存的状态');
-  }
-
-  function colStyle(c: number): React.CSSProperties {
-    const st = colState[c];
-    if (st === 'key') return { background: '#dbeafe', borderColor: '#3b82f6' };
-    if (st === 'value') return { background: '#dcfce7', borderColor: '#16a34a' };
-    return {};
-  }
-
-  function toggleSituation(stepNo: number, groupId: string, value: string) {
-    setSituations(prev => {
-      const idx = prev.findIndex(s => s.groupId === groupId && s.value === value);
-      if (idx >= 0) return prev.filter((_, i) => i !== idx);
-      // 同一 group 内最多选一个：先移除同 group 的其它
-      const filtered = prev.filter(s => s.groupId !== groupId);
-      return [...filtered, { stepNo, groupId, value }];
-    });
-  }
-
+  const zone = parseAnnotation(table.annotationJson)?.functionalZone ?? '';
   return (
     <div style={{
-      marginBottom: '14px', padding: '10px 12px', background: '#fff',
+      marginBottom: '8px', padding: '10px 12px', background: '#fff',
       border: table.annotated ? '1px solid #0d8a72' : '1px solid #e5e7eb',
-      borderRadius: '8px',
+      borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap',
     }}>
-      <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'flex-start', gap: '8px', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: '#142033' }}>
-            {table.tableCode && <span style={{ color: '#0d8a72', marginRight: '6px' }}>{table.tableCode}</span>}
-            {(table.tableTitle || '').replace(table.tableCode || '', '').trim()}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: '#142033' }}>
+          {table.tableCode && <span style={{ color: '#0d8a72', marginRight: '6px' }}>{table.tableCode}</span>}
+          {(table.tableTitle || '').replace(table.tableCode || '', '').trim()}
+        </div>
+        {(table.chapter || table.unit) && (
+          <div style={{ fontSize: '11px', color: '#888', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {table.chapter}{table.chapter && table.unit ? ' · ' : ''}{table.unit ? `单位：${table.unit}` : ''}
           </div>
-          {(table.chapter || table.unit) && (
-            <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
-              {table.chapter}{table.chapter && table.unit ? ' · ' : ''}{table.unit ? `单位：${table.unit}` : ''}
-            </div>
-          )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          {table.annotated && (
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#0d8a721a', color: '#0d8a72', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 600 }}>
-              <CheckIcon size={11} />已标注
-            </span>
-          )}
-          {table.aiPrelabeled && !table.annotated && (
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#b676111a', color: '#b67611', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 600 }}>
-              <Sparkles size={11} />AI 待确认
-            </span>
-          )}
-          {functionalZone && (
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#3b82f61a', color: '#3b82f6', fontWeight: 600 }}>
-              🏗️ {functionalZone}
-            </span>
-          )}
-          {!table.annotated && !table.aiPrelabeled && (
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#5e6c801a', color: '#5e6c80', fontWeight: 600 }}>
-              未标注
-            </span>
-          )}
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={aiPrelabel}
-            disabled={prelabeling}
-            style={{ fontSize: '11px', padding: '2px 8px' }}
-          >
-            {prelabeling ? <Loader2 className="spin" size={11} /> : <Sparkles size={11} />}
-            AI 预标注
-          </button>
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={() => setEditing(v => !v)}
-            style={{ fontSize: '11px', padding: '2px 8px' }}
-          >
-            <Tag size={11} />{editing ? '收起标注' : '标注'}
-          </button>
-        </div>
+        )}
       </div>
-
-      {headers.length === 0 && rows.length === 0 ? (
-        <p style={{ fontSize: '12px', color: '#888', margin: 0 }}>表格内容为空</p>
+      {table.annotated ? (
+        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#0d8a721a', color: '#0d8a72', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 600 }}>
+          <CheckIcon size={11} />已标注
+        </span>
+      ) : table.aiPrelabeled ? (
+        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#b676111a', color: '#b67611', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 600 }}>
+          <Sparkles size={11} />AI 待确认
+        </span>
       ) : (
-        <div style={{ overflowX: 'auto', maxHeight: '340px', overflowY: 'auto', border: '1px solid #eef0f2' }}>
-          <table style={{ fontSize: '11px', borderCollapse: 'collapse', minWidth: '100%' }}>
-            {headers.length > 0 && (
-              <thead style={{ background: '#f5f8fc', position: 'sticky', top: 0 }}>
-                {headers.map((hr, hi) => (
-                  <tr key={`h${hi}`}>
-                    {hr.map((cell, ci) => (
-                      <th
-                        key={ci}
-                        onClick={editing && hi === 0 ? () => cycleCol(ci) : undefined}
-                        style={{
-                          border: '1px solid #d1d5db', padding: '4px 8px',
-                          textAlign: 'left', fontWeight: 600, whiteSpace: 'nowrap',
-                          cursor: editing && hi === 0 ? 'pointer' : 'default',
-                          ...(hi === 0 ? colStyle(ci) : {}),
-                        }}
-                        title={editing && hi === 0 ? '点击切换：查询键 → 标准值 → 取消' : ''}
-                      >
-                        {cell}
-                        {hi === 0 && colState[ci] === 'key' && <span style={{ marginLeft: '4px', fontSize: '10px', color: '#3b82f6' }}>🔑</span>}
-                        {hi === 0 && colState[ci] === 'value' && <span style={{ marginLeft: '4px', fontSize: '10px', color: '#16a34a' }}>📊</span>}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-            )}
-            <tbody>
-              {rows.map((row, ri) => (
-                <tr key={ri} style={{ background: ri % 2 === 0 ? '#fff' : '#fafbfc' }}>
-                  {row.map((cell, ci) => (
-                    <td key={ci} style={{
-                      border: '1px solid #e5e7eb', padding: '4px 8px',
-                      whiteSpace: 'nowrap',
-                      ...(colState[ci] === 'key' ? { background: '#eff6ff' } : {}),
-                      ...(colState[ci] === 'value' ? { background: '#f0fdf4' } : {}),
-                    }}>{cell}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#5e6c801a', color: '#5e6c80', fontWeight: 600 }}>
+          未标注
+        </span>
       )}
-
-      {editing && (
-        <div style={{ marginTop: '12px', padding: '10px 12px', background: '#fafbfc', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#444' }}>
-              标注配置 <span style={{ color: '#888', fontWeight: 'normal' }}>（点击表头切换"查询键 / 标准值"）</span>
-            </div>
-            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={() => {
-                  // 把所有非 'key' 的列设为 'value'（行查表模式：1 个主键 → 其余全为标准值）
-                  const next: Record<number, ColState> = {};
-                  const nextName: Record<number, string> = { ...colName };
-                  const nextSem: Record<number, Semantic> = { ...colSemantic };
-                  for (let c = 0; c < colCount; c++) {
-                    if (colState[c] === 'key') {
-                      next[c] = 'key';
-                    } else {
-                      next[c] = 'value';
-                      if (!nextName[c] && headers[0]?.[c]) nextName[c] = headers[0][c];
-                      if (!nextSem[c]) nextSem[c] = 'upper_bound';
-                    }
-                  }
-                  setColState(next);
-                  setColName(nextName);
-                  setColSemantic(nextSem);
-                }}
-                style={{ fontSize: '10px', padding: '2px 8px' }}
-                title="行查表模式：先标好主键，再点这个把剩余列全部设为标准值（默认上限）"
-              >
-                <Tag size={10} />剩余列全标为标准值
-              </button>
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={() => { setColState({}); setColName({}); setColSemantic({}); }}
-                style={{ fontSize: '10px', padding: '2px 8px' }}
-                title="清空所有列的标注状态"
-              >
-                <X size={10} />清空列标注
-              </button>
-            </div>
-          </div>
-
-          {/* 列名 + semantic 配置 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '8px', marginBottom: '12px' }}>
-            {Array.from({ length: colCount }, (_, c) => c)
-              .filter(c => colState[c] === 'key' || colState[c] === 'value')
-              .map(c => (
-                <div key={c} style={{
-                  padding: '6px 8px', borderRadius: '5px',
-                  border: '1px solid ' + (colState[c] === 'key' ? '#3b82f6' : '#16a34a'),
-                  background: colState[c] === 'key' ? '#eff6ff' : '#f0fdf4',
-                }}>
-                  <div style={{ fontSize: '10px', color: '#666', marginBottom: '3px' }}>
-                    列 {c}（{headers[0]?.[c] ?? ''}）— {colState[c] === 'key' ? '🔑 查询键' : '📊 标准值'}
-                  </div>
-                  <input
-                    type="text"
-                    value={colName[c] ?? ''}
-                    onChange={e => setColName(n => ({ ...n, [c]: e.target.value }))}
-                    placeholder="语义名（如 机组容量 / 直流供水管线）"
-                    style={{ width: '100%', fontSize: '11px', padding: '3px 5px', border: '1px solid #d1d5db', borderRadius: '3px' }}
-                  />
-                  {colState[c] === 'value' && (
-                    <select
-                      value={colSemantic[c] ?? 'upper_bound'}
-                      onChange={e => setColSemantic(s => ({ ...s, [c]: e.target.value as Semantic }))}
-                      style={{ marginTop: '4px', width: '100%', fontSize: '11px', padding: '3px', border: '1px solid #d1d5db', borderRadius: '3px' }}
-                    >
-                      <option value="upper_bound">上限（项目实际 ≤ 此值即通过）</option>
-                      <option value="lower_bound">下限（项目实际 ≥ 此值即通过）</option>
-                      <option value="exact">精确匹配</option>
-                    </select>
-                  )}
-                </div>
-              ))}
-            {Array.from({ length: colCount }, (_, c) => c)
-              .filter(c => colState[c] === 'key' || colState[c] === 'value').length === 0 && (
-              <div style={{ fontSize: '11px', color: '#888' }}>请点击上方表头列设置「查询键」和「标准值」</div>
-            )}
-          </div>
-
-          {/* 功能区 */}
-          <div style={{ marginBottom: '10px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#444', marginBottom: '4px' }}>
-              功能区 <span style={{ color: '#888', fontWeight: 'normal' }}>（一个项目的不同构筑物用地组成部分，比如风电分 5 个功能区）</span>
-            </div>
-            <select
-              value={functionalZone}
-              onChange={e => setFunctionalZone(e.target.value)}
-              style={{ width: '100%', fontSize: '11px', padding: '4px 6px', border: '1px solid #d1d5db', borderRadius: '4px' }}
-            >
-              <option value="">— 通用 / 未归类 —</option>
-              {zoneOptions.map(z => <option key={z} value={z}>{z}</option>)}
-            </select>
-            {zoneOptions.length === 0 && (
-              <div style={{ fontSize: '10px', color: '#bb4b5b', marginTop: '3px' }}>
-                此项目类型未在 FunctionalZoneCatalog 配置功能区，请先在前后端添加
-              </div>
-            )}
-          </div>
-
-          {/* 适用情形 */}
-          <div style={{ marginBottom: '10px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#444', marginBottom: '5px' }}>
-              适用情形 <span style={{ color: '#888', fontWeight: 'normal' }}>（选择哪些项目情形下应启用此表；同一组只能选一项；不选表示全局适用）</span>
-            </div>
-            <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '4px', padding: '6px', background: '#fff' }}>
-              {Object.entries(CASE_GROUPS).map(([stepStr, groups]) => {
-                const stepNo = Number(stepStr);
-                return groups.map(g => (
-                  <div key={g.id} style={{ marginBottom: '6px' }}>
-                    <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>
-                      [第{stepNo}步] {g.title}
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                      {g.options.map(o => {
-                        const selected = situations.some(s => s.groupId === g.id && s.value === o.value);
-                        return (
-                          <button
-                            key={o.value}
-                            type="button"
-                            onClick={() => toggleSituation(stepNo, g.id, o.value)}
-                            style={{
-                              fontSize: '10px', padding: '2px 6px',
-                              border: '1px solid ' + (selected ? '#0d8a72' : '#d1d5db'),
-                              background: selected ? '#0d8a72' : '#fff',
-                              color: selected ? '#fff' : '#444',
-                              borderRadius: '3px', cursor: 'pointer',
-                            }}
-                          >
-                            {o.value}: {o.label.length > 14 ? o.label.slice(0, 14) + '…' : o.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ));
-              })}
-            </div>
-          </div>
-
-          {/* 备注 */}
-          <div style={{ marginBottom: '10px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#444', marginBottom: '4px' }}>备注</div>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              rows={2}
-              placeholder="可选：写一两句这张表的用途、注意事项..."
-              style={{ width: '100%', fontSize: '11px', padding: '4px 6px', border: '1px solid #d1d5db', borderRadius: '4px' }}
-            />
-          </div>
-
-          {/* 按钮 */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-            <button type="button" className="btn btn-outline" onClick={resetEdits} style={{ fontSize: '11px', padding: '4px 10px' }}>
-              <RotateCcw size={11} />重置
-            </button>
-            <button type="button" className="btn btn-primary" onClick={save} disabled={saving} style={{ fontSize: '11px', padding: '4px 10px' }}>
-              {saving ? <Loader2 className="spin" size={11} /> : <Save size={11} />}保存标注
-            </button>
-          </div>
-        </div>
+      {zone && (
+        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#3b82f61a', color: '#3b82f6', fontWeight: 600 }}>
+          🏗️ {zone}
+        </span>
       )}
+      <button type="button" className="btn btn-primary" onClick={() => onOpen(table)} style={{ fontSize: '12px', padding: '4px 12px' }}>
+        <Tag size={12} />标注
+      </button>
     </div>
   );
 }
@@ -480,10 +94,14 @@ export default function StandardLibrary() {
   const [tables, setTables] = useState<Map<string, StandardTableDto[]>>(new Map());
   const [tablesLoading, setTablesLoading] = useState<string | null>(null);
   const [prelabelingAll, setPrelabelingAll] = useState<string | null>(null);
+  const [drawerTable, setDrawerTable] = useState<StandardTableDto | null>(null);
+  const [keyModalOpen, setKeyModalOpen] = useState(false);
+  const [confirmKeyOpen, setConfirmKeyOpen] = useState(false);
 
   async function prelabelAll(typeKey: string) {
+    // AI 预标注：非强依赖场景，未配 key 弹居中确认弹窗引导去配置、不拦截访问
+    if (!aiConfigHasKey()) { setConfirmKeyOpen(true); return; }
     const cfg = readAiConfig();
-    if (!cfg.deepseekApiKey) { setError('请先在 NavBar「AI 配置」中填写 DeepSeek API Key'); return; }
     if (!window.confirm('AI 一键预标注会对该类型下所有未标注的表逐个调用 DeepSeek，可能耗时较长。继续？')) return;
     setPrelabelingAll(typeKey);
     setError('');
@@ -813,19 +431,10 @@ export default function StandardLibrary() {
                       </p>
                     ) : (
                       (tables.get(t.typeKey) ?? []).map(tbl => (
-                        <StandardTableView
+                        <StandardTableRow
                           key={tbl.id}
                           table={tbl}
-                          onUpdate={fresh => {
-                            setTables(prev => {
-                              const m = new Map(prev);
-                              const list = (m.get(t.typeKey) ?? []).map(x => x.id === fresh.id ? fresh : x);
-                              m.set(t.typeKey, list);
-                              return m;
-                            });
-                          }}
-                          onError={setError}
-                          onNotice={setNotice}
+                          onOpen={setDrawerTable}
                         />
                       ))
                     )}
@@ -846,6 +455,36 @@ export default function StandardLibrary() {
           onSubmit={submitUpload}
         />
       )}
+
+      {drawerTable && (
+        <AnnotationDrawer
+          table={drawerTable}
+          onUpdate={fresh => {
+            setDrawerTable(fresh);
+            setTables(prev => {
+              const m = new Map(prev);
+              const list = (m.get(fresh.projectType) ?? []).map(x => x.id === fresh.id ? fresh : x);
+              m.set(fresh.projectType, list);
+              return m;
+            });
+          }}
+          onError={setError}
+          onNotice={setNotice}
+          onClose={() => setDrawerTable(null)}
+          onNeedKey={() => setConfirmKeyOpen(true)}
+        />
+      )}
+
+      <ConfirmModal
+        open={confirmKeyOpen}
+        title="需要配置 AI Key"
+        message="AI 预标注需要先配置 DeepSeek API Key。是否现在去配置？"
+        confirmText="去配置"
+        onConfirm={() => { setConfirmKeyOpen(false); setKeyModalOpen(true); }}
+        onCancel={() => setConfirmKeyOpen(false)}
+      />
+
+      <SettingsModal open={keyModalOpen} onClose={() => setKeyModalOpen(false)} />
     </div>
   );
 }

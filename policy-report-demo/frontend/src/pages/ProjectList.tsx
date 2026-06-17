@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, FolderOpen, RefreshCw, Loader2, AlertTriangle, CheckCircle2, Database, Trash2, Library } from 'lucide-react';
 import { v2ListProjects, v2CreateProject, v2DeleteProject } from '../api';
-import type { ProjectDashboard, ProjectRecord, CreateProjectPayload } from '../types';
+import type { ProjectDashboard, ProjectRecord } from '../types';
 import { canEdit, isAdmin } from '../auth';
+import { aiConfigHasKey } from '../aiConfig';
 import NavBar from './NavBar';
+import SettingsModal from './SettingsModal';
 
 const STATUS_LABELS: Record<string, string> = {
   '草稿': '上传材料',
@@ -35,10 +37,7 @@ export default function ProjectList() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [creating, setCreating] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<CreateProjectPayload>({
-    projectName: '', projectType: 'wind-power', owner: '', location: ''
-  });
+  const [keyModalOpen, setKeyModalOpen] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -66,26 +65,29 @@ export default function ProjectList() {
     }
   }
 
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.projectName.trim()) { setError('请填写项目名称'); return; }
+  // 创建占位项目：名称/类型/单位/地点都是占位，用户在上传后的 TypeConfirm/InfoConfirm 补全真实信息
+  async function createPlaceholder() {
     setCreating(true);
     setError('');
     try {
-      const created = await v2CreateProject(form);
-      setNotice(`项目 ${created.projectCode} 已创建`);
-      setShowForm(false);
-      setForm({ projectName: '', projectType: 'wind-power', owner: '', location: '' });
+      const created = await v2CreateProject({ projectName: '未命名项目', projectType: 'general', owner: '', location: '' });
       navigate(`/projects/${created.id}/upload`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '创建失败');
-    } finally {
       setCreating(false);
     }
   }
 
+  // 新建项目：未配 DeepSeek Key 先弹引导（强制配置 + 测试连通），通过后再建项目
+  function handleNewProject() {
+    if (!aiConfigHasKey()) {
+      setKeyModalOpen(true);
+      return;
+    }
+    void createPlaceholder();
+  }
+
   const projects = dashboard?.projects ?? [];
-  const projectTypes = dashboard?.projectTypes ?? [];
   const standardCount = (dashboard?.standardSummaries ?? []).reduce((s, i) => s + i.count, 0);
   const editAllowed = canEdit();
   const adminOnly = isAdmin();
@@ -111,43 +113,12 @@ export default function ProjectList() {
               <RefreshCw size={15} />刷新
             </button>
             {editAllowed && (
-              <button className="btn btn-primary" type="button" onClick={() => setShowForm(!showForm)}>
-                <Plus size={15} />新建项目
+              <button className="btn btn-primary" type="button" onClick={handleNewProject} disabled={creating}>
+                {creating ? <Loader2 className="spin" size={15} /> : <Plus size={15} />}新建项目
               </button>
             )}
           </div>
         </div>
-
-        {showForm && (
-          <section className="home-panel create-project-panel" style={{ marginBottom: '20px' }}>
-            <div className="panel-title"><Plus size={17} />新建项目草稿</div>
-            <form onSubmit={handleCreate}>
-              <div className="home-form-grid">
-                <label>项目名称 <span style={{ color: '#e55' }}>*</span>
-                  <input value={form.projectName} onChange={e => setForm({ ...form, projectName: e.target.value })} placeholder="例如：兴宁五塘风电场一期工程" required />
-                </label>
-                <label>项目类型
-                  <select value={form.projectType} onChange={e => setForm({ ...form, projectType: e.target.value })}>
-                    {projectTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                </label>
-                <label>建设单位
-                  <input value={form.owner} onChange={e => setForm({ ...form, owner: e.target.value })} placeholder="建设单位/业主单位" />
-                </label>
-                <label>建设地点
-                  <input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="市、县、乡镇或具体位置" />
-                </label>
-              </div>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                <button className="btn btn-primary" type="submit" disabled={creating}>
-                  {creating ? <Loader2 className="spin" size={15} /> : <Plus size={15} />}
-                  创建并上传材料
-                </button>
-                <button className="btn btn-outline" type="button" onClick={() => setShowForm(false)}>取消</button>
-              </div>
-            </form>
-          </section>
-        )}
 
         <div className="home-grid" style={{ marginBottom: '20px' }}>
           <section className="home-panel stats-panel">
@@ -217,6 +188,16 @@ export default function ProjectList() {
           )}
         </section>
       </div>
+
+      <SettingsModal
+        open={keyModalOpen}
+        requireKey
+        onClose={() => setKeyModalOpen(false)}
+        onSaved={() => {
+          setKeyModalOpen(false);
+          void createPlaceholder();
+        }}
+      />
     </div>
   );
 }
