@@ -166,6 +166,14 @@ export function analyzeDocument(file: File, targetStep: string, aiConfig: AiConf
   return request<AnalysisResponse>('/api/documents/analyze', { method: 'POST', body: formData });
 }
 
+export function testAiKey(deepseekApiKey: string, deepseekModel = 'deepseek-chat'): Promise<{ ok: boolean; message: string }> {
+  return request<{ ok: boolean; message: string }>('/api/ai/test-key', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deepseekApiKey, deepseekModel }),
+  });
+}
+
 export function synthesizeAnalyses(analyses: AnalysisResponse[], aiConfig: AiConfig): Promise<SynthesizeResponse> {
   return request<SynthesizeResponse>('/api/documents/synthesize', {
     method: 'POST',
